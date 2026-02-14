@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="ja" prefix="og: http://ogp.me/ns#">
+<head>
+    <!-- 
+      Cloudflare Pages & Functions SEO最適化版 v11.0
+      - Functions連携: サーバー側でのOGP書き換えに対応
+      - SEO強化: Canonicalタグの動的制御、JSON-LDの最適化
+    -->
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LGXBBWLCPN"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-LGXBBWLCPN');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    <!-- SEO Meta Tags (Functionsによって動的に書き換わります) -->
+    <title>三原市まち歩き - PHOTO MAP | 三原市の魅力を再発見するプロジェクト</title>
+    <meta name="description" content="広島県三原市の魅力を再発見するフォトマッププロジェクト。地元の人だけが知る絶景や隠れたスポットを写真と地図で紹介しています。">
+    <meta name="keywords" content="三原市, 観光, 写真, マップ, 絶景, グルメ, 広島県, 瀬戸内海">
+    
+    <!-- Canonical Tag (正規化) -->
+    <link rel="canonical" href="https://mihara-rediscover.pages.dev/" id="canonical-tag">
+
+    <!-- OGP (SNSシェア用 - Functionsによって動的に書き換わります) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="三原市まち歩き - PHOTO MAP">
+    <meta property="og:description" content="まだ知らない三原の景色を、みんなで描くフォトマップ。">
+    <meta property="og:site_name" content="三原市まち歩き - PHOTO MAP">
+    <meta property="og:locale" content="ja_JP">
+    <meta property="og:image" content="https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="三原市まち歩き - PHOTO MAP">
+    <meta name="twitter:description" content="広島県三原市の魅力を再発見するフォトマッププロジェクト。">
+    <meta name="twitter:image" content="https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg">
+
+    <!-- ブロック回避用 -->
+    <meta name="referrer" content="no-referrer">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+    
+    <!-- RPG風フォント -->
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    
+    <!-- CSS / Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSV Parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- Leaflet (Map Library) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <style>
+        :root {
+            --palette-blue: #004098;
+            --palette-blue-light: #e1f5fe;
+            --palette-sky: #f0f7ff;
+            --palette-gold: #f5d76e;
+            --text-main: #1a1a1a;
+            --text-sub: #4b5563;
+            --border-soft: #e2e8f0;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        /* --- 字体の徹底統一設定 --- */
+        *:not(i):not(svg):not(polyline):not(rect):not(path):not(circle):not(line) {
+            font-family: 'Zen Maru Gothic', sans-serif !important;
+            font-weight: 500;
+        }
+
+        .serif-custom {
+            font-family: 'Noto Serif JP', serif !important;
+            font-weight: 700 !important;
+        }
+
+        body {
+            color: var(--text-main);
+            background-color: #fff;
+            margin: 0;
+            padding-top: 60px;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+            line-height: 1.8;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        /* --- ナビゲーション --- */
+        .fixed-nav {
+            position: fixed; top: 0; left: 0; width: 100%; height: 60px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--border-soft);
+            z-index: 9999;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 15px;
+            transition: all 0.5s ease;
+        }
+        .header-logo { font-weight: 700 !important; font-size: 0.8rem; color: var(--palette-blue); letter-spacing: 0.05em; }
+        .nav-links-wrap { display: flex; gap: 10px; align-items: center; }
+        .nav-simple-link {
+            font-size: 10px; font-weight: 700 !important; color: #9ca3af; cursor: pointer; transition: color 0.2s;
+            text-decoration: none; white-space: nowrap;
+        }
+        .nav-simple-link:active, .nav-simple-link:hover { color: var(--palette-blue); }
+
+        @media (min-width: 640px) {
+            .header-logo { font-size: 1rem; letter-spacing: 0.1em; }
+            .nav-links-wrap { gap: 20px; }
+            .nav-simple-link { font-size: 12px; }
+        }
+
+        /* --- ヘッダー内のRPGスイッチボタン (冒険の扉) --- */
+        #rpg-toggle-btn {
+            background: var(--palette-blue);
+            border: 1px solid var(--palette-blue);
+            color: white;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 4px;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0, 64, 152, 0.2); 
+        }
+        #rpg-toggle-btn:hover {
+            background: #00337a; 
+            transform: translateY(-1px);
+        }
+        #rpg-toggle-btn i {
+            color: var(--palette-gold);
+            font-size: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .nav-simple-link { font-size: 9px; }
+            .nav-links-wrap { gap: 6px; } 
+            #rpg-toggle-btn { 
+                padding: 5px 10px; 
+                font-size: 9px; 
+            }
+            @media (max-width: 370px) {
+                .header-logo { display: none; } 
+                .fixed-nav { justify-content: center; }
+            }
+        }
+
+        /* --- ヒーロー --- */
+        .hero-view {
+            position: relative; width: 100%; height: 80vh; height: 80dvh;
+            background-color: #f7f7f7; overflow: hidden;
+        }
+        .slider-container { position: absolute; inset: 0; z-index: 1; }
+        .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 2s ease-in-out; }
+        .slide.active { opacity: 1; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .hero-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.3) 100%); z-index: 2; }
+        .hero-content { position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: white; padding: 0 20px; text-align: center; }
+        .hero-label { font-size: 0.75rem; font-weight: 700 !important; letter-spacing: 0.4em; color: var(--palette-gold); margin-bottom: 25px; display: block; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .hero-title { font-size: 1.65rem; line-height: 1.8; text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.5); }
+        .mobile-br { display: block; }
+        @media (min-width: 640px) { .hero-title { font-size: 2.8rem; line-height: 1.6; } .mobile-br { display: none; } }
+
+        /* --- セクションデザイン --- */
+        .section-wrap { padding: 100px 24px; scroll-margin-top: 60px; position: relative; transition: background-color 0.5s ease; }
+        .inner-limit { max-width: 750px; margin: 0 auto; text-align: center; }
+        .section-tag-label { font-size: 0.8rem; font-weight: 700 !important; color: var(--palette-blue); letter-spacing: 0.25em; margin-bottom: 40px; display: block; text-transform: uppercase; }
+
+        .card-frame { 
+            background: white; border-radius: 12px; padding: 40px 25px; margin-bottom: 30px; text-align: left; 
+            border: 1px solid var(--border-soft); box-shadow: 0 10px 30px rgba(0,64,152,0.03); 
+            transition: all 0.5s ease;
+        }
+        .card-frame h4 { font-weight: 700 !important; color: var(--palette-blue); margin-bottom: 12px; font-size: 1rem; border-left: 5px solid var(--palette-blue); padding-left: 15px; }
+        .card-frame p { font-size: 0.85rem; font-weight: 500 !important; line-height: 2.3; color: var(--text-sub); }
+
+        /* --- ギャラリー / MAP --- */
+        .sticky-tab-bar { position: sticky; top: 60px; background: rgba(255,255,255,0.98); z-index: 900; border-bottom: 2px solid var(--palette-blue); overflow-x: auto; white-space: nowrap; transition: all 0.5s ease; }
+        .sticky-tab-bar::-webkit-scrollbar { display: none; }
+        .tab-flex { display: flex; padding: 0 10px; justify-content: center; }
+        .tab-item { padding: 22px 18px; font-size: 0.85rem; font-weight: 700 !important; color: #9ca3af; border-bottom: 4px solid transparent; cursor: pointer; }
+        .tab-item.active { color: var(--palette-blue); border-bottom-color: var(--palette-blue); }
+        @media (max-width: 640px) { .tab-flex { justify-content: flex-start; } }
+
+        /* 表示切り替えスイッチ */
+        .view-switch {
+            display: inline-flex; background: #f1f5f9; padding: 4px; border-radius: 50px; margin-bottom: 20px; transition: all 0.5s ease;
+        }
+        .view-btn {
+            padding: 8px 24px; border-radius: 40px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.3s; color: #64748b; display: flex; align-items: center;
+        }
+        .view-btn.active { background: white; color: var(--palette-blue); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* 写真グリッド & ホバーエフェクト */
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-soft); }
+        @media (min-width: 768px) { .photo-grid { grid-template-columns: repeat(4, 1fr); } }
+        
+        .photo-item { position: relative; aspect-ratio: 1/1; background: #f3f4f6; overflow: hidden; cursor: pointer; }
+        .photo-item img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .photo-overlay {
+            position: absolute; inset: 0; 
+            background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 80%);
+            opacity: 0; transition: opacity 0.6s ease;
+            display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; 
+            pointer-events: none;
+        }
+        .photo-overlay span {
+            transform: translateY(15px); opacity: 0;
+            transition: transform 0.6s cubic-bezier(0.215, 0.61, 0.355, 1), opacity 0.6s ease;
+        }
+        @media (hover: hover) {
+            .photo-item:hover img { transform: scale(1.1); }
+            .photo-item:hover .photo-overlay { opacity: 1; }
+            .photo-item:hover .photo-overlay span { transform: translateY(0); opacity: 1; }
+            .photo-item:hover .photo-overlay span:nth-child(2) { transition-delay: 0.05s; }
+        }
+        @media (hover: none) {
+            .photo-item.in-view .photo-overlay { opacity: 1; transition-delay: 0.1s; }
+            .photo-item.in-view .photo-overlay span { transform: translateY(0); opacity: 1; transition-delay: 0.3s; }
+            .photo-item.in-view .photo-overlay span:nth-child(2) { transition-delay: 0.4s; }
+        }
+        .photo-item.error-img img { display: none; }
+        .photo-item.error-img::after {
+            content: "\f03e"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #cbd5e1; font-size: 1.5rem;
+        }
+        
+        /* 地図コンテナ */
+        #map-container { height: 60vh; min-height: 500px; width: 100%; z-index: 1; display: none; border-bottom: 1px solid var(--border-soft); }
+        #map-container.active { display: block; }
+
+        /* Leafletのポップアップカスタマイズ */
+        .leaflet-popup-content-wrapper { border-radius: 8px; overflow: hidden; padding: 0; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .leaflet-popup-content { margin: 0; width: 220px !important; }
+        .popup-img-wrap { width: 100%; height: 130px; overflow: hidden; position: relative; background: #f3f4f6; }
+        .popup-img { width: 100%; height: 100%; object-fit: cover; }
+        .popup-info { padding: 12px; background: white; transition: background 0.5s ease; }
+        .popup-title { font-size: 13px; font-weight: bold; color: var(--palette-blue); margin-bottom: 2px; line-height: 1.4; font-family: 'Noto Serif JP', serif !important; }
+        .popup-area { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 4px; display: block; }
+        .popup-more { font-size: 10px; color: var(--palette-blue); display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-weight: 700; margin-top: 5px; }
+
+        /* マーカークラスター */
+        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background-color: rgba(0, 64, 152, 0.2) !important; }
+        .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+            background-color: var(--palette-blue) !important; color: #fff !important;
+            font-family: 'Zen Maru Gothic', sans-serif !important; font-weight: 900 !important;
+            box-shadow: 0 4px 10px rgba(0, 64, 152, 0.3);
+        }
+
+        /* --- 募集セクション --- */
+        .h2-one-line { font-size: 1.6rem; font-weight: 700 !important; margin-bottom: 50px; line-height: 1.2; text-align: center; white-space: nowrap; letter-spacing: -0.07em; color: var(--palette-blue); }
+        @media (max-width: 380px) { .h2-one-line { font-size: 1.25rem; } }
+
+        .insta-cta-box {
+            margin-top: 60px; padding: 40px 20px; background: #fff; border: 2px dashed var(--palette-blue-light); border-radius: 20px;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            transition: all 0.5s ease;
+        }
+        .insta-btn-final {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+            color: white !important; padding: 18px 45px; border-radius: 100px;
+            font-weight: 700 !important; text-decoration: none; font-size: 1rem;
+            box-shadow: 0 10px 25px rgba(220, 39, 67, 0.25);
+            white-space: nowrap; 
+        }
+
+        /* --- イメージディバイダー --- */
+        .img-divider-box {
+            position: relative; width: 100%; height: auto; min-height: 320px; aspect-ratio: 16/9; overflow: hidden;
+            border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft);
+            background: #f3f4f6;
+        }
+        .img-divider-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .img-divider-content { position: relative; z-index: 2; height: 100%; display: flex; align-items: flex-end; padding: 25px; }
+
+        /* --- 最下部ビジュアル --- */
+        .bottom-view-container {
+            position: relative; width: 100%; height: auto; min-height: 450px; aspect-ratio: 4/5;
+            overflow: hidden; border-top: 1px solid var(--border-soft);
+            background: #f3f4f6;
+        }
+        @media (min-width: 640px) { .bottom-view-container { aspect-ratio: 16/7; } }
+        .bottom-view-container img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .bottom-view-overlay { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 50px; }
+        .floating-badge { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 20px 35px; text-align: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; }
+
+        /* フッター */
+        .footer-main { text-align: center; background-color: #fff; border-top: 1px solid var(--border-soft); padding: 60px 20px 60px 20px; transition: background-color 0.5s ease; }
+        .footer-copy { font-size: 9px; font-weight: 700 !important; color: #9ca3af; letter-spacing: 0.3em; margin-bottom: 12px; text-transform: uppercase; }
+        .footer-produced { font-size: 8px; font-weight: 500 !important; color: #cbd5e1; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+        .footer-note { font-size: 8px; font-weight: 500 !important; color: #cbd5e1; letter-spacing: 0.05em; }
+
+        /* モーダル */
+        .modal-wrap { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; background: white; overflow-y: auto; transition: background-color 0.5s ease; }
+        .modal-wrap.active { display: block; }
+        .modal-close { position: fixed; top: 15px; right: 15px; background: white; border: 1px solid #eee; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 11000; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s, background-color 0.5s ease; }
+        .modal-close:hover { transform: rotate(90deg); }
+
+        /* --- シェアボタンのデザイン --- */
+        .share-btn-group {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px;
+        }
+        .share-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #f1f5f9; color: #64748b;
+            font-size: 16px; transition: all 0.3s;
+            text-decoration: none;
+            border: 1px solid transparent;
+        }
+        .share-btn:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        /* 各SNSカラー */
+        .share-btn.x-twitter:hover { background: #000; color: #fff; }
+        .share-btn.facebook:hover { background: #1877f2; color: #fff; }
+        .share-btn.line:hover { background: #06c755; color: #fff; }
+        .share-btn.copy-link:hover { background: #475569; color: #fff; }
+
+        /* コピー完了メッセージ */
+        #copy-success-msg {
+            font-size: 10px; font-weight: bold; color: var(--palette-blue);
+            opacity: 0; transition: opacity 0.3s ease; height: 14px;
+        }
+        #copy-success-msg.show { opacity: 1; }
+
+
+        /* --- 冒険の書モード (RPG Mode) --- */
+        body.rpg-mode {
+            background-color: #000 !important;
+            color: #fff !important;
+            font-family: 'DotGothic16', sans-serif !important;
+        }
+
+        /* 全ての要素のフォントを強制変更 */
+        body.rpg-mode *:not(i) {
+            font-family: 'DotGothic16', sans-serif !important;
+            letter-spacing: 0.1em;
+        }
+
+        /* 画像フィルター解除 */
+        body.rpg-mode img {
+            filter: none;
+            image-rendering: auto;
+        }
+
+        /* 地図をドット絵風に */
+        body.rpg-mode .leaflet-layer {
+            filter: contrast(120%) saturate(200%);
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+        }
+
+        /* 青いウィンドウ風デザイン */
+        body.rpg-mode .card-frame,
+        body.rpg-mode .fixed-nav,
+        body.rpg-mode .sticky-tab-bar,
+        body.rpg-mode .popup-info,
+        body.rpg-mode .insta-cta-box,
+        body.rpg-mode .footer-main,
+        body.rpg-mode .section-wrap:nth-child(even) {
+            background: #00008b !important;
+            border: 3px double #fff !important;
+            border-radius: 4px !important;
+            color: #fff !important;
+            box-shadow: 0 0 0 2px #000;
+        }
+
+        /* モーダルの中身 */
+        body.rpg-mode #modal-content-area {
+            background: #00008b !important;
+            border: 3px double #fff !important;
+            box-shadow: 0 0 0 2px #000;
+            color: #fff !important;
+        }
+        body.rpg-mode .modal-wrap {
+            background: rgba(0,0,0,0.85) !important;
+        }
+        body.rpg-mode .modal-close {
+            background: #000 !important;
+            border: 2px solid #fff !important;
+            color: #fff !important;
+        }
+        body.rpg-mode #modal-map-btn {
+            background: #000 !important;
+            border: 2px solid #fff !important;
+            color: #ff0 !important;
+        }
+        
+        /* セクション背景 */
+        body.rpg-mode .section-wrap {
+            background-color: #000 !important;
+        }
+        body.rpg-mode #contact {
+            border-top: none !important;
+        }
+
+        /* テキストカラー */
+        body.rpg-mode h1, body.rpg-mode h2, body.rpg-mode h3, body.rpg-mode h4, 
+        body.rpg-mode h5, body.rpg-mode p, body.rpg-mode span, body.rpg-mode a, body.rpg-mode div, body.rpg-mode li,
+        body.rpg-mode #modal-title,
+        body.rpg-mode #modal-desc,
+        body.rpg-mode #modal-author,
+        body.rpg-mode .share-label {
+            color: #fff !important;
+            text-shadow: 2px 2px 0 #000;
+        }
+        
+        body.rpg-mode .inner-limit p,
+        body.rpg-mode #contact p {
+            display: inline-block;
+            text-align: left;
+        }
+        
+        /* 強調文字 */
+        body.rpg-mode .text-blue-900, 
+        body.rpg-mode .section-tag-label,
+        body.rpg-mode h4,
+        body.rpg-mode #modal-area,
+        body.rpg-mode #modal-sns,
+        body.rpg-mode #copy-success-msg {
+            color: #f5d76e !important;
+            border-color: #f5d76e !important;
+        }
+
+        /* ボタン関係 */
+        body.rpg-mode .view-switch { background: #000 !important; }
+        
+        body.rpg-mode .view-btn, 
+        body.rpg-mode .tab-item,
+        body.rpg-mode .share-btn {
+            background: #000 !important;
+            border: 2px solid #fff !important;
+            color: #fff !important;
+            margin: 2px;
+            border-radius: 4px;
+        }
+        body.rpg-mode .view-btn.active, 
+        body.rpg-mode .tab-item.active {
+            background: #a52a2a !important;
+            color: #ff0 !important;
+            border-color: #ff0 !important;
+        }
+
+        /* RPGモード時のシェアボタンホバー */
+        body.rpg-mode .share-btn:hover {
+            background: #a52a2a !important;
+            color: #ff0 !important;
+            transform: none;
+        }
+
+        /* ヘッダー内スイッチ */
+        body.rpg-mode #rpg-toggle-btn {
+            background: #000 !important;
+            border: 2px solid #fff !important;
+            color: #fff !important;
+            font-family: 'DotGothic16', sans-serif !important;
+        }
+
+        body.rpg-mode #about { padding-bottom: 40px !important; }
+        body.rpg-mode #gallery { padding-top: 60px !important; }
+        body.rpg-mode #sub-map {
+            color: #1a1a1a !important;
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body id="top">
+
+    <!-- ナビゲーション（ヘッダー） -->
+    <nav class="fixed-nav">
+        <div class="header-logo" id="header-logo">MIHARA REDISCOVER</div>
+        <div class="nav-links-wrap">
+            <div class="nav-simple-link" onclick="scrollToId('gallery')">マップ</div>
+            <div class="nav-simple-link" onclick="scrollToId('contact')">掲載募集</div>
+            <div class="nav-simple-link" onclick="scrollToId('guideline')">掲載案内</div>
+            
+            <!-- ★RPG切替ボタン（冒険の扉） -->
+            <button id="rpg-toggle-btn" onclick="toggleRPGMode()">
+                <i class="fa-solid fa-dungeon"></i> <span>冒険の扉</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ヒーロー -->
+    <section class="hero-view">
+        <div class="slider-container">
+            <div class="slide active"><img src="https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg" alt="桜" onerror="this.style.display='none'"></div>
+            <div class="slide"><img src="https://i.postimg.cc/Z56hFGB9/IMG-9585.jpg" alt="旗" onerror="this.style.display='none'"></div>
+            <div class="slide"><img src="https://i.postimg.cc/cLypHF9y/IMG-9584.jpg" alt="海" onerror="this.style.display='none'"></div>
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="hero-label" id="hero-label">MIHARA REDISCOVER PROJECT</span>
+            <h1 class="hero-title serif-custom" id="hero-title">
+                まだ知らない三原の景色を、<br class="mobile-br">
+                みんなで描くフォトマップ
+            </h1>
+        </div>
+    </section>
+
+    <!-- 1. ABOUT -->
+    <section id="about" class="section-wrap bg-white">
+        <div class="inner-limit">
+            <span class="section-tag-label" id="label-about">About Project</span>
+            <h3 class="serif-custom text-blue-900 text-2xl mb-12" id="title-about">みんなで描く、三原の未来</h3>
+            <div class="card-frame border-2 border-blue-50" id="card-about">
+                <p class="text-sm font-bold text-justify">
+                    広島県三原市（みはらし）は、瀬戸内海の穏やかな気候と豊かな自然に恵まれた、歴史と文化が息づく街です。陸・海・空の交通の要衝として知られ、「広島空港」がある空の玄関口でもあります。<br><br>
+                    このプロジェクトは、そんな三原の日常にある「美しさ」を再発見するためのもの。地元の人だけが知る特別な場所や、日常のふとした風景を写真で紡ぎ、共有していきます。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. ギャラリー / MAP Area -->
+    <section id="gallery" class="bg-white" style="padding-top: 0;">
+        <div class="pt-0 pb-8 px-6 text-center">
+            <h3 class="serif-custom text-blue-900 text-2xl mb-4" id="title-map">PHOTO MAP</h3>
+            <p id="sub-map" class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Find Your Favorite Spot</p>
+            
+            <!-- 表示切り替えスイッチ -->
+            <div class="view-switch">
+                <div id="btn-view-grid" class="view-btn active" onclick="switchView('grid')">
+                    <i class="fa-solid fa-border-all mr-2"></i> PHOTO
+                </div>
+                <div id="btn-view-map" class="view-btn" onclick="switchView('map')">
+                    <i class="fa-solid fa-map-location-dot mr-2"></i> MAP
+                </div>
+            </div>
+        </div>
+
+        <!-- タブ（フィルター） -->
+        <nav class="sticky-tab-bar">
+            <div class="tab-flex">
+                <div class="tab-item active" data-area="all">ぜんぶ</div>
+                <div class="tab-item" data-area="mihara">三原市街</div>
+                <div class="tab-item" data-area="daiwa">大和</div>
+                <div class="tab-item" data-area="kui">久井</div>
+                <div class="tab-item" data-area="hongo">本郷</div>
+                <div class="tab-item" data-area="sagi">佐木島</div>
+            </div>
+        </nav>
+        
+        <!-- 写真グリッド表示エリア -->
+        <div id="gallery-wrap">
+            <div id="gallery-grid" class="photo-grid">
+                <!-- JSでコンテンツ生成 -->
+                <div class="col-span-3 py-32 text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest">Collecting memories...</div>
+            </div>
+            <!-- もっと見るボタン -->
+            <div id="load-more-area" class="text-center py-10 hidden">
+                <button onclick="loadMoreItems()" class="bg-[#004098] text-white text-xs font-bold py-3 px-10 rounded-full hover:opacity-90 transition shadow-lg tracking-widest">
+                    MORE PHOTOS
+                </button>
+            </div>
+        </div>
+
+        <!-- 地図表示エリア -->
+        <div id="map-container"></div>
+    </section>
+
+    <!-- 3. 掲載募集 -->
+    <section id="contact" class="section-wrap" style="background-color: var(--palette-sky); border-top: 1px solid var(--border-soft);">
+        <div class="inner-limit">
+            <span class="section-tag-label" id="label-contact">Photo Submission</span>
+            <h2 class="h2-one-line serif-custom" id="title-contact">三原の魅力を教えてください</h2>
+            
+            <p id="text-contact-desc" class="text-sm text-gray-500 leading-loose font-bold mb-8">
+                隠れた名所、美味しいグルメ、四季折々の風景、まちのイベント、あるいは何気ない日常のひとコマなど、三原の魅力が伝わる写真を幅広く募集しています。
+            </p>
+            
+            <div class="bg-white/60 p-6 rounded-lg border border-blue-100 shadow-sm inline-block text-center mb-12 insta-cta-box" style="margin-top:0; border-radius:8px; border-style:solid; border-width:1px;">
+                <p class="text-xs text-blue-900 leading-loose font-bold">
+                    以下の情報を添えて、Instagram<br>
+                    （<a href="https://www.instagram.com/mihara_sampo" target="_blank" rel="noopener noreferrer" class="underline decoration-blue-300">@mihara_sampo</a>）のDMよりお送りください。<br>
+                    内容を確認の上、サイトに追加させていただきます！
+                </p>
+            </div>
+            
+            <div class="card-frame border-2 border-blue-100">
+                <h5 class="text-center font-bold text-[10px] border-b pb-4 mb-6 tracking-widest uppercase text-blue-900">Required Information</h5>
+                <ul class="text-[11px] font-bold space-y-4 text-gray-600">
+                    <li class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#004098" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 写真データ (JPEG/PNGなど)</li>
+                    <li class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#004098" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> スポット名 / 紹介コメント</li>
+                    <li class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#004098" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 撮影者名 / SNSリンク (任意)</li>
+                </ul>
+            </div>
+            
+            <div class="insta-cta-box">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact via Instagram</p>
+                <a href="https://www.instagram.com/mihara_sampo" target="_blank" rel="noopener noreferrer" class="insta-btn-final">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    InstagramでDMを送る
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- イメージ：SUNAMI BEACH PARK -->
+    <div class="img-divider-box">
+        <img src="https://i.postimg.cc/FFc54tpJ/IMG-9587.jpg" alt="SUNAMI BEACH PARK" onerror="this.style.display='none'">
+        <div class="img-divider-content">
+            <span class="text-white text-[10px] font-bold tracking-widest bg-black/40 p-2 rounded uppercase shadow-xl">SUNAMI BEACH PARK</span>
+        </div>
+    </div>
+
+    <!-- 4. 掲載案内 -->
+    <section id="guideline" class="section-wrap" style="background-color: var(--palette-sky);">
+        <div class="inner-limit">
+            <span class="section-tag-label" id="label-guideline">Guidelines</span>
+            <h2 class="h2-one-line serif-custom text-slate-800" id="title-guideline">写真掲載についてのご案内</h2>
+            <div class="space-y-6">
+                <div class="card-frame">
+                    <h4>写真掲載のルール</h4>
+                    <p>地域の魅力を伝えることを目的に、風景やお店、日常のひとコマを掲載しています。どなたでも自由に掲載できる仕組みではなく、ご連絡をいただいた内容を確認した上で掲載を行っています。</p>
+                </div>
+                <div class="card-frame">
+                    <h4>権利とマナー</h4>
+                    <p>著作権は撮影者本人にあります。人物や私有地が写る場合は、必ず権利者の許可を得てからご投稿ください。不適切な写真は掲載を見送る場合がございます。</p>
+                </div>
+                <div class="card-frame">
+                    <h4>写真の取り扱い</h4>
+                    <p>ご提供いただいた写真は、当サイトや関連SNSにおいて三原を盛り上げる広報活動に大切に使用させていただきます。投稿者さんの意思を尊重し、丁寧に扱わせていただきます。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 最下部：人物解放パノラマ -->
+    <section class="bottom-view-container">
+        <img src="https://i.postimg.cc/Df1DNrfM/IMG-9590.jpg" alt="三原港パノラマ" onerror="this.style.display='none'">
+        <div class="bottom-view-overlay">
+            <div class="floating-badge">
+                <p class="serif-custom italic text-2xl mb-1 text-white">Beautiful Mihara,</p>
+                <p class="text-white text-[9px] font-bold tracking-[0.4em] uppercase">REDISCOVER PROJECT</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- フッター -->
+    <footer class="footer-main">
+        <p class="footer-copy">&copy; 2026 Mihara Walk Photo Map</p>
+        <p class="footer-produced">PRODUCED BY MICHIM | ALL PHOTOS BY MIHARA WALK COMMUNITY</p>
+        <p class="footer-note" style="margin-top: 8px;">このサイトは個人が運営する非公式サイトです。</p>
+    </footer>
+
+    <!-- 写真詳細モーダル -->
+    <div id="photo-modal" class="modal-wrap">
+        <button id="modal-close-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+        <div id="modal-content-area" class="max-w-[600px] mx-auto pb-24 bg-white min-h-screen sm:min-h-0">
+            <img id="modal-img" src="" class="w-full aspect-square object-cover" onerror="this.style.display='none'">
+            <div class="px-8 py-12 text-left">
+                <span id="modal-area" class="text-[9px] font-bold tracking-widest text-blue-600 border border-blue-600 px-3 py-1 mb-6 inline-block uppercase">AREA</span>
+                <h2 id="modal-title" class="serif-custom text-2xl mb-4 leading-normal text-slate-800">タイトル</h2>
+                <p id="modal-desc" class="text-sm font-medium leading-loose mb-8 text-slate-600">紹介文</p>
+                
+                <!-- マップボタン -->
+                <a id="modal-map-btn" href="#" target="_blank" rel="noopener noreferrer" class="mb-10 flex items-center justify-center gap-2 w-full border border-blue-900 text-blue-900 font-bold text-xs py-4 rounded hover:bg-blue-50 transition">
+                    <i class="fa-solid fa-location-dot"></i>
+                    この場所をGoogleマップで見る
+                </a>
+
+                <div class="flex items-center justify-between border-t border-slate-200 pt-8 mb-8">
+                    <span id="modal-author" class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">PHOTO BY 管理者</span>
+                    <a id="modal-sns" href="#" target="_blank" rel="noopener noreferrer" class="text-gray-900 font-bold text-[10px] border-b border-gray-900 pb-1 uppercase hover:opacity-70 transition">Instagram Link</a>
+                </div>
+
+                <!-- ▼▼▼ シェアボタンエリア ▼▼▼ -->
+                <div class="pt-6 border-t border-slate-200 text-center">
+                    <p id="share-label" class="share-label text-[9px] font-bold text-slate-400 mb-4 tracking-widest uppercase">SHARE THIS SPOT</p>
+                    <div class="share-btn-group">
+                        <a id="share-x" href="#" target="_blank" rel="noopener noreferrer" class="share-btn x-twitter" title="X (Twitter)でシェア">
+                            <!-- 𝕏 SVG -->
+                            <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                        </a>
+                        <a id="share-fb" href="#" target="_blank" rel="noopener noreferrer" class="share-btn facebook" title="Facebookでシェア">
+                            <i class="fa-brands fa-facebook-f"></i>
+                        </a>
+                        <a id="share-line" href="#" target="_blank" rel="noopener noreferrer" class="share-btn line" title="LINEで送る">
+                            <i class="fa-brands fa-line"></i>
+                        </a>
+                        <button id="share-copy" class="share-btn copy-link" title="リンクをコピー">
+                            <i class="fa-solid fa-link"></i>
+                        </button>
+                    </div>
+                    <p id="copy-success-msg">リンクをコピーしました！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 冒険の書モード用ロジック ---
+        const originalTexts = {};
+
+        function toggleRPGMode() {
+            const body = document.body;
+            const btn = document.getElementById('rpg-toggle-btn');
+            const isRPG = body.classList.toggle('rpg-mode');
+
+            // モーダルが開いていたらテキストを即時更新する
+            const modal = document.getElementById('photo-modal');
+            if (modal.classList.contains('active') && modal._currentSpot) {
+                updateModalText(modal._currentSpot, isRPG);
+            }
+
+            if (isRPG) {
+                // --- RPGモード ON ---
+                btn.innerHTML = '<i class="fa-solid fa-book-open"></i> <span>現代に戻る</span>';
+                
+                swapText('header-logo', 'MIHARA QUEST');
+                swapText('hero-label', 'MIHARA QUEST PROJECT');
+                swapText('hero-title', '勇者よ、まだ見ぬ三原の<br>地図を完成させるのだ');
+                
+                swapText('label-about', 'QUEST INFO');
+                swapText('title-about', '冒険の目的');
+                
+                if(document.querySelector('#card-about p')) {
+                   const originalP = document.querySelector('#card-about p');
+                   if (!originalP._originalHTML) originalP._originalHTML = originalP.innerHTML;
+                   originalP.innerHTML = 'ここ　ミハラは　いにしえより　つづく　まち。<br><br>ゆうしゃよ、このせかいに　かくれた<br>「うるわしきもの」を　さがしだすのだ。<br><br>それが　みつかりしとき、<br>あらたな　でんせつが　はじまるのだ。<br><br>さあ　ゆくがよい！<br>ぼうけんの　たびは　はじまった！';
+                }
+
+                swapText('title-map', 'WORLD MAP');
+                swapText('sub-map', 'Find Hidden Treasures');
+                
+                swapText('label-contact', 'Guild Request');
+                swapText('title-contact', '情報をギルドに送る');
+
+                if(document.querySelector('#text-contact-desc')) {
+                    const el = document.querySelector('#text-contact-desc');
+                    if (!el._originalHTML) el._originalHTML = el.innerHTML;
+                    el.innerHTML = 'ミハラには まだみぬ 「うるわしき ケシキ」や<br>「ウマいもの」が かくされている。<br><br>たびびとよ、そなたのみつけた<br>「ミハラのキオク」を ギルドにおしえてくれ！';
+                }
+
+                swapText('label-guideline', 'Rules');
+                swapText('title-guideline', '冒険の掟');
+
+                swapText('share-label', 'SEND MESSAGE');
+                swapText('copy-success-msg', 'ふしぎなじゅもんを コピーした！');
+
+                document.getElementById('btn-view-grid').innerHTML = '<i class="fa-solid fa-dungeon"></i> しらべる';
+                document.getElementById('btn-view-map').innerHTML = '<i class="fa-solid fa-map"></i> ちず';
+                
+            } else {
+                // --- RPGモード OFF ---
+                btn.innerHTML = '<i class="fa-solid fa-dungeon"></i> <span>冒険の扉</span>';
+                
+                restoreText('header-logo');
+                restoreText('hero-label');
+                restoreText('hero-title');
+                restoreText('label-about');
+                restoreText('title-about');
+                if(document.querySelector('#card-about p')) restoreTextByElement(document.querySelector('#card-about p'));
+
+                restoreText('title-map');
+                restoreText('sub-map');
+                restoreText('label-contact');
+                restoreText('title-contact');
+                if(document.querySelector('#text-contact-desc')) restoreTextByElement(document.querySelector('#text-contact-desc'));
+
+                restoreText('label-guideline');
+                restoreText('title-guideline');
+                restoreText('share-label');
+                restoreText('copy-success-msg');
+
+                document.getElementById('btn-view-grid').innerHTML = '<i class="fa-solid fa-border-all mr-2"></i> PHOTO';
+                document.getElementById('btn-view-map').innerHTML = '<i class="fa-solid fa-map-location-dot mr-2"></i> MAP';
+            }
+        }
+
+        function updateModalText(spot, isRPG) {
+            const titleEl = document.getElementById('modal-title');
+            const descEl = document.getElementById('modal-desc');
+            const mapBtn = document.getElementById('modal-map-btn');
+
+            let rawDesc = (spot.desc || '紹介文はありません。');
+
+            if (isRPG) {
+                if (spot.rpg_title && spot.rpg_title.trim() !== "") {
+                    titleEl.textContent = spot.rpg_title;
+                } else {
+                    titleEl.textContent = spot.title;
+                }
+
+                if (spot.rpg_desc && spot.rpg_desc.trim() !== "") {
+                    descEl.innerHTML = spot.rpg_desc.replace(/\n/g, '<br>');
+                } else {
+                    descEl.innerHTML = rawDesc.replace(/\n/g, '<br>');
+                }
+
+                mapBtn.innerHTML = '<i class="fa-solid fa-map"></i> ちずを ひらく';
+            } else {
+                titleEl.textContent = spot.title;
+                descEl.innerHTML = rawDesc.replace(/\n/g, '<br>');
+                mapBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> この場所をGoogleマップで見る';
+            }
+        }
+
+        function swapText(id, newText) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (!originalTexts[id]) originalTexts[id] = el.innerHTML;
+                el.innerHTML = newText;
+            }
+        }
+        function restoreText(id) {
+            const el = document.getElementById(id);
+            if (el && originalTexts[id]) {
+                el.innerHTML = originalTexts[id];
+            }
+        }
+        function swapTextByElement(el, newText) {
+            if (!el) return;
+            if (!el._originalHTML) el._originalHTML = el.innerHTML;
+            el.innerHTML = newText;
+        }
+        function restoreTextByElement(el) {
+            if (el && el._originalHTML) {
+                el.innerHTML = el._originalHTML;
+            }
+        }
+
+        // --- 既存機能 ---
+        function scrollToId(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                const headerOffset = 60;
+                const elementPosition = el.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+            }
+        }
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        function rotateSlides() {
+            if (slides.length < 2) return;
+            setInterval(() => {
+                slides[currentSlide].classList.remove('active');
+                currentSlide = (currentSlide + 1) % slides.length;
+                slides[currentSlide].classList.add('active');
+            }, 6000);
+        }
+
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jkQnLXsIL33pmO60BCd0hIr_v5xh34cJ_IWAHkF0pTaj855pzicmNoVx6W8CPK3MEhlp-irodPSE/pub?gid=1232979489&single=true&output=csv";
+        let spotsData = [];
+        const labels = { 'all': 'すべてのエリア', 'daiwa': '大和エリア', 'kui': '久井エリア', 'hongo': '本郷エリア', 'mihara': '三原エリア', 'sagi': '鷺・離島エリア' };
+        
+        const AREA_POSITIONS = {
+            'all':    { lat: 34.4200, lng: 133.0800, zoom: 11 },
+            'mihara': { lat: 34.4000, lng: 133.0800, zoom: 13 },
+            'daiwa':  { lat: 34.5300, lng: 132.9500, zoom: 12 },
+            'kui':    { lat: 34.5600, lng: 133.0500, zoom: 12 },
+            'hongo':  { lat: 34.4200, lng: 132.9200, zoom: 12 },
+            'sagi':   { lat: 34.3300, lng: 133.1100, zoom: 12 }
+        };
+
+        const ITEMS_PER_PAGE = 12;
+        let currentFilteredData = [];
+        let displayedCount = 0;
+        let currentActiveArea = 'all';
+
+        let mapInstance = null;
+        let markersClusterGroup = null; 
+        let currentViewMode = 'grid'; 
+
+        function formatDriveUrl(urlOrId, size = 'w1000') {
+            if (!urlOrId) return '';
+            const str = urlOrId.toString();
+            const idMatch = str.match(/[-\w]{25,}/);
+            const isGoogleOrId = str.includes('google') || !str.startsWith('http');
+            if (isGoogleOrId && idMatch) {
+                return `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=${size}`;
+            }
+            if (str.startsWith('http')) {
+                 return str.replace('http://', 'https://');
+            }
+            return '';
+        }
+
+        function switchView(mode) {
+            currentViewMode = mode;
+            const gridWrap = document.getElementById('gallery-wrap');
+            const mapContainer = document.getElementById('map-container');
+            const btnGrid = document.getElementById('btn-view-grid');
+            const btnMap = document.getElementById('btn-view-map');
+            const stickyTab = document.querySelector('.sticky-tab-bar');
+
+            if (mode === 'grid') {
+                gridWrap.style.display = 'block';
+                mapContainer.classList.remove('active');
+                btnGrid.classList.add('active');
+                btnMap.classList.remove('active');
+                if(stickyTab) stickyTab.style.display = 'block';
+            } else {
+                gridWrap.style.display = 'none';
+                mapContainer.classList.add('active');
+                btnGrid.classList.remove('active');
+                btnMap.classList.add('active');
+                if(stickyTab) stickyTab.style.display = 'block';
+                
+                if (!mapInstance) {
+                    initMap();
+                } else {
+                    setTimeout(() => { mapInstance.invalidateSize(); }, 200);
+                }
+                updateMapMarkers();
+            }
+        }
+
+        function initMap() {
+            const initPos = AREA_POSITIONS['all'];
+            mapInstance = L.map('map-container').setView([initPos.lat, initPos.lng], initPos.zoom);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(mapInstance);
+
+            markersClusterGroup = L.markerClusterGroup({
+                showCoverageOnHover: false, 
+                maxClusterRadius: 50,       
+                spiderfyOnMaxZoom: true     
+            });
+            mapInstance.addLayer(markersClusterGroup);
+        }
+
+        function updateMapMarkers() {
+            if (!mapInstance || !markersClusterGroup) return;
+            markersClusterGroup.clearLayers();
+            let hasMarkers = false;
+
+            currentFilteredData.forEach(spot => {
+                if (spot.lat && spot.lng) {
+                    const lat = parseFloat(spot.lat);
+                    const lng = parseFloat(spot.lng);
+                    if (isNaN(lat) || isNaN(lng)) return;
+                    hasMarkers = true;
+
+                    const imgUrl = formatDriveUrl(spot.image, 'w500');
+                    const areaLabel = labels[spot.area] || 'MIHARA';
+
+                    const popupContent = `
+                        <div onclick="openModalFromMap('${spot.title}')" style="cursor:pointer;">
+                            <div class="popup-img-wrap">
+                                <img src="${imgUrl}" class="popup-img" onerror="this.src='https://placehold.co/200x130/e2e8f0/94a3b8?text=No+Image';">
+                            </div>
+                            <div class="popup-info">
+                                <span class="popup-area">${areaLabel}</span>
+                                <div class="popup-title">${spot.title}</div>
+                                <div class="popup-more">詳細を見る <i class="fa-solid fa-chevron-right text-[8px]"></i></div>
+                            </div>
+                        </div>
+                    `;
+
+                    const marker = L.marker([lat, lng]).bindPopup(popupContent);
+                    markersClusterGroup.addLayer(marker);
+                }
+            });
+
+            if (hasMarkers) {
+                mapInstance.fitBounds(markersClusterGroup.getBounds(), { padding: [50, 50], maxZoom: 15 });
+            } else {
+                const setting = AREA_POSITIONS[currentActiveArea] || AREA_POSITIONS['all'];
+                mapInstance.setView([setting.lat, setting.lng], setting.zoom);
+            }
+        }
+
+        window.openModalFromMap = function(targetTitle) {
+            const target = spotsData.find(s => s.title === targetTitle);
+            if (target) openModal(target);
+        };
+
+        function render(filter) {
+            currentActiveArea = filter; 
+
+            const grid = document.getElementById('gallery-grid');
+            const loadMoreArea = document.getElementById('load-more-area');
+            
+            const filtered = filter === 'all' ? [...spotsData] : spotsData.filter(s => s.area === filter);
+            currentFilteredData = filtered.reverse();
+
+            grid.innerHTML = '';
+            displayedCount = 0;
+
+            if (currentFilteredData.length === 0) {
+                grid.innerHTML = '<div class="col-span-3 py-32 text-center text-[10px] font-bold text-gray-300 uppercase tracking-widest">No Items Found</div>';
+                loadMoreArea.classList.add('hidden');
+            } else {
+                loadMoreItems();
+            }
+
+            if (currentViewMode === 'map') {
+                updateMapMarkers();
+            }
+        }
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.25 
+        };
+        const itemObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in-view');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        function loadMoreItems() {
+            const grid = document.getElementById('gallery-grid');
+            const loadMoreArea = document.getElementById('load-more-area');
+
+            const nextItems = currentFilteredData.slice(displayedCount, displayedCount + ITEMS_PER_PAGE);
+
+            nextItems.forEach(spot => {
+                const img = formatDriveUrl(spot.image, 'w500');
+                const areaName = labels[spot.area] || 'MIHARA';
+                // SEO対策: Alt属性にキーワードを盛り込む
+                const seoAlt = `${spot.title} - 広島県三原市の観光スポット風景写真 | 三原市まち歩き`;
+                
+                const item = document.createElement('div');
+                item.className = 'photo-item';
+                item.onclick = () => openModal(spot);
+                
+                item.innerHTML = `
+                    <img src="${img}" loading="lazy" alt="${seoAlt}" onerror="this.parentElement.classList.add('error-img')">
+                    <div class="photo-overlay">
+                        <span class="text-[9px] text-white font-bold tracking-widest uppercase mb-1">${areaName}</span>
+                        <span class="text-sm text-white font-bold serif-custom drop-shadow-md">${spot.title}</span>
+                    </div>
+                `;
+                grid.appendChild(item);
+                itemObserver.observe(item);
+            });
+
+            displayedCount += nextItems.length;
+
+            if (displayedCount < currentFilteredData.length) {
+                loadMoreArea.classList.remove('hidden');
+            } else {
+                loadMoreArea.classList.add('hidden');
+            }
+        }
+
+        // --- SEO: URLパラメータ処理 (パーマリンク) ---
+        function updateUrlParams(spotTitle) {
+            if (!history.pushState) return;
+            
+            // URL構築
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?spot=' + encodeURIComponent(spotTitle);
+            
+            // URL変更
+            window.history.pushState({path: newUrl}, '', newUrl);
+            
+            // タイトル変更
+            document.title = `${spotTitle} | 三原市まち歩き PHOTO MAP`;
+            
+            // メタディスクリプションの動的変更
+            const spot = spotsData.find(s => s.title === spotTitle);
+            if(spot) {
+                const descMeta = document.querySelector('meta[name="description"]');
+                if(descMeta) {
+                    // ディスクリプションをスポットの紹介文（冒頭100文字程度）に変更
+                    let descText = (spot.desc || spot.title + 'の風景写真です。').replace(/\n/g, '');
+                    if(descText.length > 100) descText = descText.substring(0, 100) + '...';
+                    descMeta.setAttribute('content', descText);
+                }
+            }
+
+            // カノニカルタグの書き換え
+            const linkCanonical = document.getElementById('canonical-tag');
+            if (linkCanonical) {
+                linkCanonical.setAttribute('href', newUrl);
+            }
+        }
+
+        function clearUrlParams() {
+            if (!history.pushState) return;
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.pushState({path: newUrl}, '', newUrl);
+            
+            document.title = "三原市まち歩き - PHOTO MAP | 三原市の魅力を再発見するプロジェクト";
+            
+            // メタディスクリプションを元に戻す
+            const descMeta = document.querySelector('meta[name="description"]');
+            if(descMeta) {
+                descMeta.setAttribute('content', "広島県三原市の魅力を再発見するフォトマッププロジェクト。地元の人だけが知る絶景や隠れたスポットを写真と地図で紹介しています。");
+            }
+
+            // カノニカルタグを元に戻す
+            const linkCanonical = document.getElementById('canonical-tag');
+            if (linkCanonical) {
+                linkCanonical.setAttribute('href', newUrl);
+            }
+        }
+
+        function openModal(spot) {
+            const modalImg = document.getElementById('modal-img');
+            modalImg.style.display = 'block'; 
+            modalImg.src = formatDriveUrl(spot.image, 'w1600');
+            modalImg.alt = spot.title;
+            
+            const modal = document.getElementById('photo-modal');
+            modal._currentSpot = spot;
+
+            const isRPG = document.body.classList.contains('rpg-mode');
+            
+            document.getElementById('modal-area').textContent = labels[spot.area] || 'MIHARA';
+            const authorText = spot.author || spot.nickname || spot.name || '管理者';
+            document.getElementById('modal-author').textContent = 'PHOTO BY ' + authorText;
+
+            updateModalText(spot, isRPG);
+
+            const snsLink = spot.sns || spot.snsurl || spot.url || spot.link;
+            const snsEl = document.getElementById('modal-sns');
+            if (snsLink && snsLink.startsWith('http')) {
+                snsEl.style.display = 'block';
+                snsEl.href = snsLink;
+                snsEl.textContent = 'INSTAGRAM LINK';
+                snsEl.style.color = '#1a1a1a';
+                snsEl.style.borderColor = '#1a1a1a';
+                snsEl.style.pointerEvents = 'auto';
+            } else {
+                snsEl.style.display = 'block';
+                snsEl.removeAttribute('href');
+                snsEl.textContent = 'NO SNS ACCOUNT';
+                snsEl.style.color = '#ccc';
+                snsEl.style.borderColor = 'transparent';
+                snsEl.style.pointerEvents = 'none';
+            }
+
+            const mapBtn = document.getElementById('modal-map-btn');
+            if (mapBtn) {
+                let mapUrl = '';
+                if (spot.map_url && spot.map_url.trim() !== "") {
+                    mapUrl = spot.map_url.trim();
+                } 
+                else if (spot.lat && spot.lng) {
+                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`;
+                } 
+                else {
+                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("三原市 " + spot.title)}`;
+                }
+                mapBtn.href = mapUrl;
+            }
+
+            // --- シェアボタンの設定 ---
+            const shareUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?spot=' + encodeURIComponent(spot.title);
+            const shareText = `三原のいいとこ見つけた！「${spot.title}」\n#三原市まち歩き #三原市`;
+
+            // X (Twitter)
+            document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+            // Facebook
+            document.getElementById('share-fb').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+            // LINE
+            document.getElementById('share-line').href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}`;
+            
+            // Copy Link
+            const copyBtn = document.getElementById('share-copy');
+            const copyMsg = document.getElementById('copy-success-msg');
+            
+            // メッセージリセット
+            copyMsg.classList.remove('show');
+
+            copyBtn.onclick = function() {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    // 成功メッセージ表示
+                    copyMsg.classList.add('show');
+                    
+                    // 2秒後に消す
+                    setTimeout(() => {
+                        copyMsg.classList.remove('show');
+                    }, 2000);
+                });
+            };
+
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // SEO: URLとタイトルを更新
+            updateUrlParams(spot.title);
+        }
+
+        function closeModal() {
+            document.getElementById('photo-modal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            document.getElementById('copy-success-msg').classList.remove('show'); // メッセージも消す
+            
+            // SEO: URLを元に戻す
+            clearUrlParams();
+        }
+
+        // --- SEO: 構造化データ(JSON-LD)生成 ---
+        function generateJsonLd(data) {
+            const schema = {
+                "@context": "https://schema.org",
+                "@type": "ImageGallery",
+                "name": "三原市まち歩き - PHOTO MAP",
+                "description": "広島県三原市の魅力を再発見するフォトマッププロジェクト。地元の人だけが知る絶景や隠れたスポット。",
+                "provider": {
+                    "@type": "Person",
+                    "name": "Michim"
+                },
+                "image": []
+            };
+
+            data.forEach(spot => {
+                if(!spot.image) return;
+                const imgUrl = formatDriveUrl(spot.image, 'w1000');
+                schema.image.push({
+                    "@type": "ImageObject",
+                    "contentUrl": imgUrl,
+                    "name": spot.title,
+                    "description": spot.desc || spot.title,
+                    "author": {
+                        "@type": "Person",
+                        "name": spot.author || spot.nickname || "Local Contributor"
+                    },
+                    "contentLocation": {
+                        "@type": "Place",
+                        "name": spot.title,
+                        "address": {
+                            "@type": "PostalAddress",
+                            "addressLocality": "Mihara",
+                            "addressRegion": "Hiroshima",
+                            "addressCountry": "JP"
+                        }
+                    }
+                });
+            });
+
+            const script = document.createElement('script');
+            script.type = 'application/ld+json';
+            script.text = JSON.stringify(schema);
+            document.head.appendChild(script);
+        }
+
+        // --- 初期ロード ---
+        window.addEventListener('load', () => {
+            rotateSlides();
+
+            const modal = document.getElementById('photo-modal');
+            const modalContent = document.getElementById('modal-content-area');
+            const closeBtn = document.getElementById('modal-close-btn');
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+            closeBtn.addEventListener('click', closeModal);
+            modalContent.addEventListener('click', (e) => e.stopPropagation());
+
+            Papa.parse(CSV_URL, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: function(results) {
+                    spotsData = results.data.map(row => {
+                        const clean = {};
+                        Object.keys(row).forEach(k => {
+                            const val = row[k];
+                            const cleanVal = (typeof val === 'string') ? val.trim() : val;
+                            let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
+                            clean[cleanKey] = cleanVal;
+                        });
+
+                        if (!clean.map_url) {
+                            clean.map_url = clean['googleマップのurl'] || 
+                                            clean['googleマップのurl(共有リンク)'] || 
+                                            clean['googleマップのurl（共有リンク）'] || 
+                                            clean['地図url'] || 
+                                            clean['googlemap'] || 
+                                            '';
+                        }
+                        return clean;
+                    }).filter(s => s.title);
+                    
+                    // SEO: 構造化データの注入
+                    generateJsonLd(spotsData);
+
+                    render('all');
+
+                    // SEO: URLパラメータがあれば該当スポットを開く
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const targetSpotTitle = urlParams.get('spot');
+                    if (targetSpotTitle) {
+                        const target = spotsData.find(s => s.title === targetSpotTitle);
+                        if (target) {
+                            openModal(target);
+                        }
+                    }
+                },
+                error: function(err) {
+                    console.error("CSV読み込みエラー:", err);
+                    document.getElementById('gallery-grid').innerHTML = '<div class="col-span-3 py-10 text-center text-xs text-red-400">データの読み込みに失敗しました。<br>時間をおいて再読み込みしてください。</div>';
+                }
+            });
+
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    render(tab.getAttribute('data-area'));
+                    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
