@@ -1,16 +1,16 @@
 /**
  * Cloudflare Pages Functions for SEO & OGP Optimization
  * * リクエストが来るたびに実行されます。
- * URLに `?spot=タイトル` が含まれている場合、CSVをフェッチして
- * そのスポットの情報を元にHTMLのメタタグ（OGP含む）を書き換えます。
+ * URLに `?spot=タイトル&lang=en` が含まれている場合、CSVをフェッチして
+ * そのスポットの情報を元にHTMLのメタタグ（OGP含む）を言語に応じて書き換えます。
  */
 
-// あなたのGoogleスプレッドシートCSVのURL
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jkQnLXsIL33pmO60BCd0hIr_v5xh34cJ_IWAHkF0pTaj855pzicmNoVx6W8CPK3MEhlp-irodPSE/pub?gid=1232979489&single=true&output=csv";
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
-  const spotTitle = url.searchParams.get('spot'); // URLパラメータを取得
+  const spotTitle = url.searchParams.get('spot'); 
+  const lang = url.searchParams.get('lang') || 'jp'; // 言語パラメータ取得（デフォルトjp）
 
   // 1. オリジナルのHTMLレスポンスを取得
   let response = await context.next();
@@ -30,118 +30,106 @@ export async function onRequest(context) {
     spotData = findSpotInCsv(csvText, spotTitle);
   } catch (e) {
     console.error('Functions Error:', e);
-    // エラー時は書き換えずにオリジナルのHTMLを返す
     return response;
   }
 
-  // データが見つからなければそのまま返す
   if (!spotData) {
     return response;
   }
 
+  // 言語に応じたテキストの振り分け
+  const ogTitle = lang === 'en' ? (spotData.title_en || spotData.title) : spotData.title;
+  let ogDesc = lang === 'en' ? (spotData.desc_en || spotData.desc || `${ogTitle} scenery.`) : (spotData.desc || `${ogTitle}の風景です。`);
+  ogDesc = ogDesc.replace(/\r?\n/g, '').substring(0, 100); // 100文字でカット
+  const siteTitle = lang === 'en' ? `${ogTitle} | Mihara Walk PHOTO MAP` : `${ogTitle} | 三原市まち歩き PHOTO MAP`;
+
   // 3. HTMLRewriterでメタタグを書き換える
-  // ここがSEO/OGP対策の肝です
   return new HTMLRewriter()
     .on('title', {
       element(element) {
-        element.setInnerContent(`${spotData.title} | 三原市まち歩き PHOTO MAP`);
+        element.setInnerContent(siteTitle);
       }
     })
     .on('meta[name="description"]', {
       element(element) {
-        let desc = spotData.desc || `${spotData.title}の風景です。`;
-        desc = desc.replace(/\r?\n/g, '').substring(0, 100);
-        element.setAttribute('content', desc);
+        element.setAttribute('content', ogDesc);
       }
     })
     .on('link[rel="canonical"]', {
       element(element) {
-        // カノニカルURLを現在のパラメータ付きURLに書き換え
         element.setAttribute('href', url.href);
       }
     })
     // OGP Tags
     .on('meta[property="og:title"]', {
       element(element) {
-        element.setAttribute('content', `${spotData.title} | 三原市まち歩き`);
+        element.setAttribute('content', siteTitle);
       }
     })
     .on('meta[property="og:description"]', {
       element(element) {
-        let desc = spotData.desc || `${spotData.title}の風景です。`;
-        desc = desc.replace(/\r?\n/g, '').substring(0, 100);
-        element.setAttribute('content', desc);
+        element.setAttribute('content', ogDesc);
       }
     })
     .on('meta[property="og:image"]', {
       element(element) {
         if (spotData.image) {
-          const imgUrl = formatDriveUrl(spotData.image);
-          element.setAttribute('content', imgUrl);
+          element.setAttribute('content', formatDriveUrl(spotData.image));
         }
       }
     })
     // Twitter Cards
     .on('meta[name="twitter:title"]', {
         element(element) {
-          element.setAttribute('content', `${spotData.title} | 三原市まち歩き`);
+          element.setAttribute('content', siteTitle);
         }
     })
     .on('meta[name="twitter:description"]', {
         element(element) {
-          let desc = spotData.desc || `${spotData.title}の風景です。`;
-          desc = desc.replace(/\r?\n/g, '').substring(0, 100);
-          element.setAttribute('content', desc);
+          element.setAttribute('content', ogDesc);
         }
     })
     .on('meta[name="twitter:image"]', {
         element(element) {
           if (spotData.image) {
-            const imgUrl = formatDriveUrl(spotData.image);
-            element.setAttribute('content', imgUrl);
+            element.setAttribute('content', formatDriveUrl(spotData.image));
           }
         }
     })
     .transform(response);
 }
 
-
 /**
  * CSVテキストから特定のタイトルの行を探すヘルパー関数
- * (サーバーレス環境ではライブラリを使わず正規表現で処理するのが軽量)
  */
 function findSpotInCsv(csvText, targetTitle) {
   const lines = csvText.split(/\r?\n/);
   if (lines.length < 2) return null;
 
-  // 1行目のヘッダーを取得して小文字に正規化
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-  
-  // タイトル列のインデックスを探す
-  // 'title', 'タイトル' などのカラム名に対応
   const titleIndex = headers.findIndex(h => h.includes('title') || h.includes('タイトル'));
   if (titleIndex === -1) return null;
 
-  // 2行目以降を走査
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
 
-    // CSVのパース（ダブルクォート内のカンマを無視する分割ロジック）
     const values = parseCSVLine(line);
     
-    // タイトルが一致するかチェック
+    // スプレッドシートのタイトル（日本語基準）と一致するか
     if (values[titleIndex] && values[titleIndex].trim() === targetTitle.trim()) {
-      // 一致したらオブジェクトを生成して返す
       const result = {};
       headers.forEach((h, index) => {
         let key = h;
-        // キー名を使いやすいように正規化
+        // キーの正規化 (英語カラムも抽出できるように追加)
         if (key.includes('image') || key.includes('画像')) key = 'image';
-        if (key.includes('desc') || key.includes('紹介')) key = 'desc';
-        if (key.includes('title') || key.includes('タイトル')) key = 'title';
+        else if (key.includes('desc_en')) key = 'desc_en';
+        else if (key.includes('desc') || key.includes('紹介')) key = 'desc';
+        else if (key.includes('title_en')) key = 'title_en';
+        else if (key.includes('title') || key.includes('タイトル')) key = 'title';
+        else if (key.includes('rpg_title_en')) key = 'rpg_title_en';
+        else if (key.includes('rpg_desc_en')) key = 'rpg_desc_en';
         
-        // 値のダブルクォート除去
         let val = values[index] ? values[index].trim() : '';
         if (val.startsWith('"') && val.endsWith('"')) {
             val = val.slice(1, -1).replace(/""/g, '"');
@@ -154,27 +142,14 @@ function findSpotInCsv(csvText, targetTitle) {
   return null;
 }
 
-/**
- * CSVの1行を正しく分割する関数
- * (カンマ区切りだが、ダブルクォート内のカンマは無視する)
- */
 function parseCSVLine(text) {
-    // 引用符内のカンマを無視して分割する正規表現
-    // 参考: CSV split regex pattern
     const matches = text.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
     return matches || [];
 }
 
-/**
- * Google Drive URLをサムネイル用URLに変換
- */
 function formatDriveUrl(url) {
     if (!url) return '';
-    // ID抽出
     const idMatch = url.match(/[-\w]{25,}/);
-    if (idMatch) {
-        // w1200はOGP画像として推奨される幅
-        return `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=w1200`;
-    }
+    if (idMatch) return `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=w1200`;
     return url;
 }
