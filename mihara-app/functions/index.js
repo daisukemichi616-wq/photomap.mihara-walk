@@ -106,22 +106,24 @@ function findSpotInCsv(csvText, targetTitle) {
   const lines = csvText.split(/\r?\n/);
   if (lines.length < 2) return null;
 
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  // ヘッダー行を取得
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const titleIndex = headers.findIndex(h => h.includes('title') || h.includes('タイトル'));
   if (titleIndex === -1) return null;
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
-    if (!line) continue;
+    if (!line.trim()) continue; // 空行はスキップ
 
     const values = parseCSVLine(line);
     
-    // スプレッドシートのタイトル（日本語基準）と一致するか
-    if (values[titleIndex] && values[titleIndex].trim() === targetTitle.trim()) {
+    // タイトル列の値を取得し、一致するか確認
+    const rowTitle = values[titleIndex] ? values[titleIndex].trim() : '';
+    
+    if (rowTitle === targetTitle.trim()) {
       const result = {};
       headers.forEach((h, index) => {
         let key = h;
-        // キーの正規化 (英語カラムも抽出できるように追加)
         if (key.includes('image') || key.includes('画像')) key = 'image';
         else if (key.includes('desc_en')) key = 'desc_en';
         else if (key.includes('desc') || key.includes('紹介')) key = 'desc';
@@ -130,11 +132,7 @@ function findSpotInCsv(csvText, targetTitle) {
         else if (key.includes('rpg_title_en')) key = 'rpg_title_en';
         else if (key.includes('rpg_desc_en')) key = 'rpg_desc_en';
         
-        let val = values[index] ? values[index].trim() : '';
-        if (val.startsWith('"') && val.endsWith('"')) {
-            val = val.slice(1, -1).replace(/""/g, '"');
-        }
-        result[key] = val;
+        result[key] = values[index] ? values[index].trim() : '';
       });
       return result;
     }
@@ -142,9 +140,33 @@ function findSpotInCsv(csvText, targetTitle) {
   return null;
 }
 
+/**
+ * 空の列やカンマを含むテキストを正確に処理するCSVパーサー
+ */
 function parseCSVLine(text) {
-    const matches = text.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-    return matches || [];
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"') {
+            // ダブルクォーテーションのエスケープ（""）を処理
+            if (inQuotes && text[i+1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            // クォーテーション外のカンマで区切る
+            result.push(current);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    result.push(current);
+    return result;
 }
 
 function formatDriveUrl(url) {
