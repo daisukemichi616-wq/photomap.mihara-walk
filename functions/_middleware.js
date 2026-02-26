@@ -40,7 +40,13 @@ export async function onRequest(context) {
   // 取得した確実なデータを使ってOGP（SNS用のタグ）を書き換える
   const ogTitle = lang === 'en' ? (spotData.title_en || spotData.title) : spotData.title;
   let ogDesc = lang === 'en' ? (spotData.desc_en || spotData.desc || `${ogTitle} scenery.`) : (spotData.desc || `${ogTitle}の風景です。`);
-  ogDesc = ogDesc.replace(/\r?\n/g, '').substring(0, 100);
+  
+  // ★変更点：改行を消した後、80文字を超える場合は「...」を付ける
+  ogDesc = ogDesc.replace(/\r?\n/g, '');
+  if (ogDesc.length > 80) {
+      ogDesc = ogDesc.substring(0, 80) + '...';
+  }
+
   const siteTitle = lang === 'en' ? `${ogTitle} | Mihara Walk PHOTO MAP` : `${ogTitle} | 三原市まち歩き PHOTO MAP`;
   
   let imageUrl = formatDriveUrl(spotData.image);
