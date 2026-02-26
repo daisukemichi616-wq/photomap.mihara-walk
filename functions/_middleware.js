@@ -11,13 +11,11 @@ export async function onRequest(context) {
 
   let response = await context.next();
 
-  // HTMLリクエスト以外はスキップ
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) {
     return response;
   }
 
-  // URLに ?spot= の指定がない場合はスキップ
   if (!spotTitle) {
     return response;
   }
@@ -34,12 +32,12 @@ export async function onRequest(context) {
     console.error('Functions Error:', e);
   }
 
-  // データが見つからなかった場合は書き換えずに返す
+  // データが取得できなかった場合は元のHTMLをそのまま返す
   if (!spotData) {
     return response;
   }
 
-  // 成功時：データを元にOGPを書き換える
+  // 取得した確実なデータを使ってOGP（SNS用のタグ）を書き換える
   const ogTitle = lang === 'en' ? (spotData.title_en || spotData.title) : spotData.title;
   let ogDesc = lang === 'en' ? (spotData.desc_en || spotData.desc || `${ogTitle} scenery.`) : (spotData.desc || `${ogTitle}の風景です。`);
   ogDesc = ogDesc.replace(/\r?\n/g, '').substring(0, 100);
@@ -59,24 +57,29 @@ export async function onRequest(context) {
     .on('meta[name="twitter:title"]', { element(e) { e.setAttribute('content', siteTitle); } })
     .on('meta[name="twitter:description"]', { element(e) { e.setAttribute('content', ogDesc); } })
     .on('meta[name="twitter:image"]', { element(e) { e.setAttribute('content', imageUrl); } })
-    // デバッグ用（成功の証）
-    .on('head', { element(e) { e.append(`<meta name="cf-functions-debug" content="success_rewritten">`, { html: true }); } })
+    .on('head', { element(e) { e.append(`<meta name="cf-functions-debug" content="success_v13">`, { html: true }); } })
     .transform(response);
 }
 
-// --- 補助関数：改行対応のCSVデータ検索 ---
+// --- 補助関数：列の番号をピンポイントで特定してデータを抽出する ---
 function findSpotInCsv(csvText, targetTitle) {
   const rows = parseCSV(csvText);
   if (rows.length < 2) return null;
 
-  // 余計な変換をせず、見出し（ヘッダー）をそのまま小文字にして取得
+  // 余計な空白を取り除き、小文字化して比較しやすくする
   const headers = rows[0].map(h => h.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase());
   
-  // 「title」列を正確に探す
-  const titleIndex = headers.findIndex(h => h === 'title' || h === 'タイトル');
+  // ★重要：完全一致（===）で列を探すことで、"rpg_title"などの誤検知を100%防ぐ
+  const titleIndex = headers.findIndex(h => h === 'title' || h === 'タイトル' || h === 'スポット名');
+  const descIndex = headers.findIndex(h => h === 'desc' || h === '紹介' || h === '紹介文');
+  const imageIndex = headers.findIndex(h => h === 'image' || h === '画像' || h === '写真' || h === 'img');
+  
+  const titleEnIndex = headers.findIndex(h => h === 'title_en' || h === '英語タイトル');
+  const descEnIndex = headers.findIndex(h => h === 'desc_en' || h === '英語紹介');
+
+  // タイトル列が見つからなければ終了
   if (titleIndex === -1) return null;
 
-  // 照合用：スペースをすべて除去して比べる
   const cleanTargetTitle = targetTitle.replace(/[\s\u3000]+/g, '');
 
   for (let i = 1; i < rows.length; i++) {
@@ -86,13 +89,15 @@ function findSpotInCsv(csvText, targetTitle) {
     const rowTitle = values[titleIndex] ? values[titleIndex].trim() : '';
     const cleanRowTitle = rowTitle.replace(/[\s\u3000]+/g, '');
     
+    // タイトルが一致したら、特定した「列の番号」から直接データを引っこ抜く
     if (cleanRowTitle === cleanTargetTitle) {
-      const result = {};
-      // 上書きバグを防ぐため、ヘッダーの名前をそのままキーにする
-      headers.forEach((h, index) => {
-        result[h] = values[index] ? values[index].trim() : '';
-      });
-      return result;
+      return {
+        title: values[titleIndex] ? values[titleIndex].trim() : '',
+        desc: (descIndex !== -1 && values[descIndex]) ? values[descIndex].trim() : '',
+        image: (imageIndex !== -1 && values[imageIndex]) ? values[imageIndex].trim() : '',
+        title_en: (titleEnIndex !== -1 && values[titleEnIndex]) ? values[titleEnIndex].trim() : '',
+        desc_en: (descEnIndex !== -1 && values[descEnIndex]) ? values[descEnIndex].trim() : ''
+      };
     }
   }
   return null;
@@ -125,7 +130,7 @@ function parseCSV(csvText) {
 function formatDriveUrl(url) {
     if (!url) return '';
     const idMatch = url.match(/[-\w]{25,}/);
-    // Google DriveのURLの場合、Twitterbotが読み込める特殊なURLに変換
+    // X(Twitter)が絶対に読み込めるGoogleフォト経由の特殊URLに変換
     if (idMatch && (url.includes('drive.google.com') || url.includes('google'))) {
         return `https://lh3.googleusercontent.com/d/${idMatch[0]}=w1200`;
     }
