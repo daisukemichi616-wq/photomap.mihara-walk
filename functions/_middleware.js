@@ -41,7 +41,7 @@ export async function onRequest(context) {
   const ogTitle = lang === 'en' ? (spotData.title_en || spotData.title) : spotData.title;
   let ogDesc = lang === 'en' ? (spotData.desc_en || spotData.desc || `${ogTitle} scenery.`) : (spotData.desc || `${ogTitle}の風景です。`);
   
-  // ★変更点：改行を消した後、80文字を超える場合は「...」を付ける
+  // 改行を消した後、80文字を超える場合は「...」を付ける
   ogDesc = ogDesc.replace(/\r?\n/g, '');
   if (ogDesc.length > 80) {
       ogDesc = ogDesc.substring(0, 80) + '...';
@@ -63,7 +63,7 @@ export async function onRequest(context) {
     .on('meta[name="twitter:title"]', { element(e) { e.setAttribute('content', siteTitle); } })
     .on('meta[name="twitter:description"]', { element(e) { e.setAttribute('content', ogDesc); } })
     .on('meta[name="twitter:image"]', { element(e) { e.setAttribute('content', imageUrl); } })
-    .on('head', { element(e) { e.append(`<meta name="cf-functions-debug" content="success_v13">`, { html: true }); } })
+    .on('head', { element(e) { e.append(`<meta name="cf-functions-debug" content="success_v15">`, { html: true }); } })
     .transform(response);
 }
 
@@ -75,7 +75,7 @@ function findSpotInCsv(csvText, targetTitle) {
   // 余計な空白を取り除き、小文字化して比較しやすくする
   const headers = rows[0].map(h => h.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase());
   
-  // ★重要：完全一致（===）で列を探すことで、"rpg_title"などの誤検知を100%防ぐ
+  // 完全一致（===）で列を探すことで、"rpg_title"などの誤検知を100%防ぐ
   const titleIndex = headers.findIndex(h => h === 'title' || h === 'タイトル' || h === 'スポット名');
   const descIndex = headers.findIndex(h => h === 'desc' || h === '紹介' || h === '紹介文');
   const imageIndex = headers.findIndex(h => h === 'image' || h === '画像' || h === '写真' || h === 'img');
