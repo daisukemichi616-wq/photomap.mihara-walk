@@ -1,6 +1,5 @@
 /**
  * Cloudflare Pages Functions - _middleware.js
- * ※ ファイル名を index.js ではなく _middleware.js にして配置してください。
  */
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jkQnLXsIL33pmO60BCd0hIr_v5xh34cJ_IWAHkF0pTaj855pzicmNoVx6W8CPK3MEhlp-irodPSE/pub?gid=1232979489&single=true&output=csv";
@@ -12,7 +11,7 @@ export async function onRequest(context) {
 
   let response = await context.next();
 
-  // HTMLリクエスト以外はスキップして通常の動作をする
+  // HTMLリクエスト以外はスキップ
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) {
     return response;
@@ -24,7 +23,6 @@ export async function onRequest(context) {
   }
 
   let spotData = null;
-  let debugMsg = 'ok';
   
   try {
     const csvRes = await fetch(CSV_URL);
@@ -32,26 +30,16 @@ export async function onRequest(context) {
     
     const csvText = await csvRes.text();
     spotData = findSpotInCsv(csvText, spotTitle);
-    
-    if (!spotData) {
-      debugMsg = 'spot_not_found_in_csv'; // CSVから見つからなかった場合
-    }
   } catch (e) {
     console.error('Functions Error:', e);
-    debugMsg = `error_${e.message}`;
   }
 
-  // 万が一データが見つからなかった場合でも、原因究明用のタグを仕込んで返す
+  // データが見つからなかった場合は書き換えずに返す
   if (!spotData) {
-    return new HTMLRewriter()
-      .on('head', {
-        element(e) {
-          e.append(`<meta name="cf-functions-debug" content="${debugMsg}">`, { html: true });
-        }
-      }).transform(response);
+    return response;
   }
 
-  // 成功時：取得したデータを元にOGPを書き換える
+  // 成功時：データを元にOGPを書き換える
   const ogTitle = lang === 'en' ? (spotData.title_en || spotData.title) : spotData.title;
   let ogDesc = lang === 'en' ? (spotData.desc_en || spotData.desc || `${ogTitle} scenery.`) : (spotData.desc || `${ogTitle}の風景です。`);
   ogDesc = ogDesc.replace(/\r?\n/g, '').substring(0, 100);
@@ -59,7 +47,6 @@ export async function onRequest(context) {
   
   let imageUrl = formatDriveUrl(spotData.image);
   if (!imageUrl) {
-      // 画像データが空の場合の予備画像（トップ画像）
       imageUrl = "https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg";
   }
 
@@ -72,46 +59,38 @@ export async function onRequest(context) {
     .on('meta[name="twitter:title"]', { element(e) { e.setAttribute('content', siteTitle); } })
     .on('meta[name="twitter:description"]', { element(e) { e.setAttribute('content', ogDesc); } })
     .on('meta[name="twitter:image"]', { element(e) { e.setAttribute('content', imageUrl); } })
-    // うまく動いた証拠を裏側に記録する
+    // デバッグ用（成功の証）
     .on('head', { element(e) { e.append(`<meta name="cf-functions-debug" content="success_rewritten">`, { html: true }); } })
     .transform(response);
 }
 
-// --- 補助関数 ---
-
+// --- 補助関数：改行対応のCSVデータ検索 ---
 function findSpotInCsv(csvText, targetTitle) {
-  const lines = csvText.split(/\r?\n/);
-  if (lines.length < 2) return null;
+  const rows = parseCSV(csvText);
+  if (rows.length < 2) return null;
 
-  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-  const titleIndex = headers.findIndex(h => h.includes('title') || h.includes('タイトル'));
+  // 余計な変換をせず、見出し（ヘッダー）をそのまま小文字にして取得
+  const headers = rows[0].map(h => h.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase());
+  
+  // 「title」列を正確に探す
+  const titleIndex = headers.findIndex(h => h === 'title' || h === 'タイトル');
   if (titleIndex === -1) return null;
 
-  // 比較のために全角・半角スペースを完全に除去して照合する（ズレ防止）
+  // 照合用：スペースをすべて除去して比べる
   const cleanTargetTitle = targetTitle.replace(/[\s\u3000]+/g, '');
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
+  for (let i = 1; i < rows.length; i++) {
+    const values = rows[i];
+    if (!values || values.length === 0 || !values[0]) continue;
 
-    const values = parseCSVLine(line);
     const rowTitle = values[titleIndex] ? values[titleIndex].trim() : '';
     const cleanRowTitle = rowTitle.replace(/[\s\u3000]+/g, '');
     
-    // スペースを除いた状態で一致するかチェック
     if (cleanRowTitle === cleanTargetTitle) {
       const result = {};
+      // 上書きバグを防ぐため、ヘッダーの名前をそのままキーにする
       headers.forEach((h, index) => {
-        let key = h;
-        if (key.includes('image') || key.includes('画像')) key = 'image';
-        else if (key.includes('desc_en')) key = 'desc_en';
-        else if (key.includes('desc') || key.includes('紹介')) key = 'desc';
-        else if (key.includes('title_en')) key = 'title_en';
-        else if (key.includes('title') || key.includes('タイトル')) key = 'title';
-        else if (key.includes('rpg_title_en')) key = 'rpg_title_en';
-        else if (key.includes('rpg_desc_en')) key = 'rpg_desc_en';
-        
-        result[key] = values[index] ? values[index].trim() : '';
+        result[h] = values[index] ? values[index].trim() : '';
       });
       return result;
     }
@@ -119,37 +98,36 @@ function findSpotInCsv(csvText, targetTitle) {
   return null;
 }
 
-function parseCSVLine(text) {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (char === '"') {
-            if (inQuotes && text[i+1] === '"') {
-                current += '"';
-                i++;
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            result.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-    result.push(current);
-    return result;
+// --- 補助関数：改行を含むCSVを正しく分解するエンジン ---
+function parseCSV(csvText) {
+  const result = [];
+  let row = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    if (char === '"') {
+      if (inQuotes && csvText[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (char === ',' && !inQuotes) {
+      row.push(current); current = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && csvText[i + 1] === '\n') { i++; }
+      row.push(current); result.push(row); row = []; current = '';
+    } else { current += char; }
+  }
+  if (current !== '' || row.length > 0) { row.push(current); result.push(row); }
+  return result;
 }
 
+// --- X（Twitter）の画像ブロック回避用URLジェネレーター ---
 function formatDriveUrl(url) {
     if (!url) return '';
     const idMatch = url.match(/[-\w]{25,}/);
-    // Google DriveのURLの場合のみID抽出してサムネイル化
-    if (idMatch && url.includes('drive.google.com')) {
-        return `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=w1200`;
+    // Google DriveのURLの場合、Twitterbotが読み込める特殊なURLに変換
+    if (idMatch && (url.includes('drive.google.com') || url.includes('google'))) {
+        return `https://lh3.googleusercontent.com/d/${idMatch[0]}=w1200`;
     }
-    // それ以外のURL（Postimagesなど）はそのまま返す
     return url;
 }
