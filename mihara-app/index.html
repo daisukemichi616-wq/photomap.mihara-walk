@@ -2,9 +2,10 @@
 <html lang="ja" prefix="og: http://ogp.me/ns#">
 <head>
     <!-- 
-      Cloudflare Pages & Functions SEO最適化版 v16.1
-      - スマホ画面でのチャット入力欄はみ出し問題を修正
-      - API通信のエラーハンドリングを強化し、原因を詳細表示
+      Cloudflare Pages & Functions SEO最適化版
+      - Functions連携: サーバー側でのOGP書き換えに対応
+      - 多言語化(i18n): EN/JPスイッチおよびRPG×英語の4パターン対応
+      - 新機能: 天気API (Open-Meteo) を用いたマジックアワー＆週間天気の自動表示
     -->
 
     <!-- Google tag (gtag.js) -->
@@ -17,7 +18,7 @@
     </script>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <!-- SEO Meta Tags -->
     <title>三原市まち歩き - PHOTO MAP | 三原市の魅力を再発見するプロジェクト</title>
@@ -75,14 +76,13 @@
             --border-soft: #e2e8f0;
         }
 
-        /* ★ 追加: スマホ画面ではみ出さないための全体設定 */
         *, *::before, *::after {
             box-sizing: border-box;
         }
 
         html { scroll-behavior: smooth; }
 
-        *:not(i):not(svg):not(polyline):not(rect):not(path):not(circle):not(line):not(.emoji-icon) {
+        *:not(i):not(svg):not(polyline):not(rect):not(path):not(circle):not(line) {
             font-family: 'Zen Maru Gothic', sans-serif !important;
             font-weight: 500;
         }
@@ -91,8 +91,6 @@
             font-family: 'Noto Serif JP', serif !important;
             font-weight: 700 !important;
         }
-
-        .emoji-icon { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important; }
 
         body {
             color: var(--text-main);
@@ -247,7 +245,7 @@
 
         /* --- 冒険の書モード (RPG Mode) --- */
         body.rpg-mode { background-color: #000 !important; color: #fff !important; font-family: 'DotGothic16', sans-serif !important; }
-        body.rpg-mode *:not(i):not(.emoji-icon) { font-family: 'DotGothic16', sans-serif !important; letter-spacing: 0.1em; }
+        body.rpg-mode *:not(i) { font-family: 'DotGothic16', sans-serif !important; letter-spacing: 0.1em; }
         body.rpg-mode img { filter: none; image-rendering: auto; }
         body.rpg-mode .leaflet-layer { filter: contrast(120%) saturate(200%); image-rendering: pixelated; image-rendering: crisp-edges; }
         body.rpg-mode .card-frame, body.rpg-mode .fixed-nav, body.rpg-mode .sticky-tab-bar, body.rpg-mode .popup-info, body.rpg-mode .insta-cta-box, body.rpg-mode .footer-main, body.rpg-mode .section-wrap:nth-child(even) { background: #00008b !important; border: 3px double #fff !important; border-radius: 4px !important; color: #fff !important; box-shadow: 0 0 0 2px #000; }
@@ -275,126 +273,6 @@
         body.rpg-mode #weekly-toggle-btn { color: #f5d76e !important; }
         body.rpg-mode .weekly-day-label { color: #fff !important; }
         body.rpg-mode #weekly-forecast-list i { color: #fff !important; }
-
-        /* --- ★ 新機能：AIチャット UI (画像タコちゃんVer) --- */
-        #ai-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; align-items: flex-end; }
-        #ai-chat-btn { 
-            width: 70px; height: 70px; border-radius: 50%; 
-            background-color: white; border: none; 
-            cursor: pointer; box-shadow: 0 6px 20px rgba(0,64,152,0.3); 
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            display: flex; justify-content: center; align-items: center; 
-            padding: 0; overflow: hidden; 
-        }
-        #ai-chat-btn img { width: 100%; height: 100%; object-fit: cover; }
-        #ai-chat-btn:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 8px 25px rgba(0,64,152,0.4); }
-        
-        #ai-chat-window { position: absolute; bottom: 90px; right: 0; width: 340px; height: 480px; max-height: 80vh; max-width: calc(100vw - 40px); background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-soft); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-origin: bottom right; }
-        #ai-chat-window.hidden { opacity: 0; transform: scale(0.5); pointer-events: none; }
-        #ai-chat-header { background: var(--palette-blue); color: white; padding: 12px 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #ai-chat-header button { background: none; border: none; color: white; font-size: 18px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
-        #ai-chat-header button:hover { opacity: 1; }
-        #ai-chat-messages { flex: 1; padding: 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
-        .chat-msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 13px; line-height: 1.6; word-wrap: break-word; position: relative; }
-        .ai-msg { background: white; color: var(--text-main); border: 1px solid var(--border-soft); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .user-msg { background: var(--palette-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 2px 5px rgba(0,64,152,0.2); }
-        .chat-msg strong { color: var(--palette-blue); font-weight: 900; }
-        .user-msg strong { color: #f5d76e; }
-        
-        /* ★ 修正: スマホではみ出さないための入力エリア調整 */
-        #ai-chat-input-area { 
-            display: flex; padding: 12px; background: white; border-top: 1px solid var(--border-soft); gap: 8px; align-items: center; 
-            width: 100%; box-sizing: border-box; /* コンテナ幅を厳密に守る */
-        }
-        #ai-chat-input { 
-            flex: 1; min-width: 0; /* フレックスアイテムの不要な広がりを防止 */
-            border: 1px solid var(--border-soft); background: #f1f5f9; border-radius: 24px; padding: 10px 16px; font-size: 13px; outline: none; transition: all 0.3s; font-family: 'Zen Maru Gothic', sans-serif; 
-        }
-        #ai-chat-input:focus { border-color: var(--palette-blue); background: white; box-shadow: 0 0 0 3px rgba(0,64,152,0.1); }
-        
-        /* ★ 修正: 紙飛行機ボタンの微調整 */
-        #ai-chat-send-btn { 
-            width: 40px; height: 40px; min-width: 40px; flex-shrink: 0; /* 絶対に縮まない・広がらない */
-            border-radius: 50%; background: var(--palette-blue); color: white; border: none; 
-            cursor: pointer; display: flex; justify-content: center; align-items: center; 
-            transition: background 0.2s; font-size: 15px; padding: 0; box-sizing: border-box;
-        }
-        #ai-chat-send-btn i { 
-            transform: translate(-1px, 1px); /* アイコンを少し左下にずらして視覚的に中央にする */
-        }
-        #ai-chat-send-btn:hover { background: #00337a; }
-        #ai-chat-send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
-
-        /* ★ タコちゃんの吹き出しスタイル */
-        .ai-tooltip {
-            position: absolute;
-            bottom: 85px;
-            right: 15px;
-            background-color: white;
-            color: var(--palette-blue);
-            padding: 10px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 900;
-            box-shadow: 0 4px 15px rgba(0,64,152,0.15);
-            white-space: nowrap;
-            pointer-events: none;
-            transition: opacity 0.3s, transform 0.3s;
-            transform-origin: bottom right;
-            animation: bounce-tooltip 2.5s infinite ease-in-out;
-            border: 2px solid var(--palette-blue);
-        }
-        .ai-tooltip::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            right: 20px;
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid var(--palette-blue);
-        }
-        .ai-tooltip::before {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            right: 21px;
-            width: 0;
-            height: 0;
-            border-left: 7px solid transparent;
-            border-right: 7px solid transparent;
-            border-top: 7px solid white;
-            z-index: 1;
-        }
-        @keyframes bounce-tooltip {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        /* チャットが開いている時は吹き出しを隠す */
-        #ai-chat-widget.open .ai-tooltip {
-            opacity: 0;
-            transform: scale(0.8);
-        }
-
-        /* RPG Mode for Chat */
-        body.rpg-mode #ai-chat-btn { border: none !important; border-radius: 4px; box-shadow: 2px 2px 0 #fff; padding: 2px; background: #000; }
-        body.rpg-mode #ai-chat-btn img { border-radius: 0; image-rendering: pixelated; }
-        body.rpg-mode #ai-chat-window { background: #00008b !important; border: 4px double #fff !important; border-radius: 4px; box-shadow: 4px 4px 0 #000; }
-        body.rpg-mode #ai-chat-header { background: #000 !important; color: #fff !important; border-bottom: 2px solid #fff; }
-        body.rpg-mode #ai-chat-messages { background: #000 !important; }
-        body.rpg-mode .ai-msg { background: #00008b !important; border: 2px solid #fff !important; color: #fff !important; border-radius: 4px; }
-        body.rpg-mode .ai-msg strong { color: #ff0 !important; }
-        body.rpg-mode .user-msg { background: #a52a2a !important; border: 2px solid #fff !important; color: #fff !important; border-radius: 4px; }
-        body.rpg-mode #ai-chat-input-area { background: #000 !important; border-top: 2px solid #fff; }
-        body.rpg-mode #ai-chat-input { background: #000 !important; border: 2px solid #fff !important; color: #fff !important; border-radius: 0; font-family: 'DotGothic16', sans-serif !important; box-shadow: none; }
-        body.rpg-mode #ai-chat-input::placeholder { color: #888; }
-        body.rpg-mode #ai-chat-send-btn { background: #000 !important; border: 2px solid #fff !important; color: #ff0 !important; border-radius: 4px; }
-        
-        /* RPGモード時の吹き出し */
-        body.rpg-mode .ai-tooltip { background: #00008b !important; color: #fff !important; border: 3px double #fff !important; border-radius: 4px; box-shadow: 4px 4px 0 #000; animation: none; font-family: 'DotGothic16', sans-serif !important; }
-        body.rpg-mode .ai-tooltip::after { border-top-color: #fff; bottom: -9px; }
-        body.rpg-mode .ai-tooltip::before { display: none; }
     </style>
 </head>
 <body id="top">
@@ -598,7 +476,6 @@
         </div>
     </section>
 
-    <!-- ★確実にフッターを元に戻しました -->
     <footer class="footer-main">
         <p class="footer-copy" data-i18n="footer-copy">&copy; 2026 Mihara Walk Photo Map</p>
         <p class="footer-produced">PRODUCED BY MICHIM | PHOTOS BY MIHARA LOVERS</p>
@@ -636,34 +513,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- ★ 新機能：三原の案内人AI (画像タコちゃんチャットボット) -->
-    <div id="ai-chat-widget">
-        <div id="ai-chat-window" class="hidden">
-            <div id="ai-chat-header">
-                <div class="flex items-center font-bold" data-i18n="ai-chat-title">
-                    <img src="tako.png" class="w-7 h-7 rounded-full mr-2 object-cover border-2 border-white shadow-sm" alt="タコ">
-                    <span>三原の案内人タコちゃん</span>
-                </div>
-                <button onclick="toggleChatWindow()"><i class="fa-solid fa-chevron-down"></i></button>
-            </div>
-            <div id="ai-chat-messages">
-                <div class="chat-msg ai-msg" data-i18n="ai-chat-greeting">こんにちはタコ！三原市の観光スポットや周辺の美味しいお店について、何でも聞いてほしいタコ！</div>
-            </div>
-            <div id="ai-chat-input-area">
-                <input type="text" id="ai-chat-input" placeholder="質問を入力してください..." data-i18n-placeholder="ai-chat-placeholder">
-                <button id="ai-chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
-            </div>
-        </div>
-
-        <!-- ★ タコちゃんの吹き出し（ふわふわ動きます） -->
-        <div id="ai-chat-tooltip" class="ai-tooltip" data-i18n="ai-chat-tooltip">何でも聞いてタコ。</div>
-
-        <!-- ★ 右下のフローティングボタン（タコの画像になります） -->
-        <button id="ai-chat-btn" onclick="toggleChatWindow()">
-            <img src="tako.png" alt="タコちゃん" onerror="this.style.display='none'">
-        </button>
     </div>
 
     <script>
@@ -720,22 +569,7 @@
             'weather-mihara': { normal: { jp: '三原市の今の天気', en: 'CURRENT WEATHER' }, rpg: { jp: 'ミハラの そらもよう', en: 'MIHARA SKIES' } },
             'weather-magic-hour': { normal: { jp: 'MAGIC HOUR', en: 'MAGIC HOUR' }, rpg: { jp: 'ゆうぐれの とき', en: 'TWILIGHT' } },
             'weather-sunrise': { normal: { jp: 'SUNRISE', en: 'SUNRISE' }, rpg: { jp: 'よあけ', en: 'DAWN' } },
-            'weather-weekly-toggle': { normal: { jp: '週間天気を見る', en: 'Weekly Forecast' }, rpg: { jp: 'このさきの そらもよう', en: 'Future Skies' } },
-
-            // ★ 画像タコちゃんAIチャット用辞書
-            'ai-chat-title': { 
-                normal: { 
-                    jp: '<img src="tako.png" class="w-6 h-6 rounded-full mr-2 object-cover border border-white" alt="タコ"><span>三原の案内人タコちゃん</span>', 
-                    en: '<img src="tako.png" class="w-6 h-6 rounded-full mr-2 object-cover border border-white" alt="Taco"><span>Mihara Guide Taco</span>' 
-                }, 
-                rpg: { 
-                    jp: '<img src="tako.png" class="w-6 h-6 rounded-full mr-2 object-cover border border-white" alt="タコ"><span>みちびきの タコ</span>', 
-                    en: '<img src="tako.png" class="w-6 h-6 rounded-full mr-2 object-cover border border-white" alt="Octopus"><span>Guide Octopus</span>' 
-                } 
-            },
-            'ai-chat-greeting': { normal: { jp: 'こんにちはタコ！三原市の観光スポットや周辺の美味しいお店について、何でも聞いてほしいタコ！', en: 'Hello! Ask me anything about sightseeing spots or local food in Mihara!' }, rpg: { jp: 'よくぞ きた ゆうしゃよ！ わしは みちびきのタコ。ミハラの ちずの ことなら なんなりと きくタコ。', en: 'Welcome, Hero! Ask me anything about the map of Mihara.' } },
-            'ai-chat-placeholder': { normal: { jp: '質問を入力してください...', en: 'Type your question...' }, rpg: { jp: 'ききたいことを いれるのだ...', en: 'Ask thy question...' } },
-            'ai-chat-tooltip': { normal: { jp: '何でも聞いてタコ。', en: 'Ask me anything, Taco!' }, rpg: { jp: 'なんでも きくタコ。', en: 'Ask away, Taco!' } }
+            'weather-weekly-toggle': { normal: { jp: '週間天気を見る', en: 'Weekly Forecast' }, rpg: { jp: 'このさきの そらもよう', en: 'Future Skies' } }
         };
 
         // --- ウェザー API 連携機能 ---
@@ -826,147 +660,6 @@
             }
         }
 
-        // --- ★ 新機能：Gemini API 連携 (バックエンドAPI経由) ---
-        let chatHistory = [];
-
-        function toggleChatWindow() {
-            const windowEl = document.getElementById('ai-chat-window');
-            const widgetEl = document.getElementById('ai-chat-widget');
-            
-            windowEl.classList.toggle('hidden');
-            widgetEl.classList.toggle('open'); // 吹き出しを消す
-            
-            if (!windowEl.classList.contains('hidden')) {
-                document.getElementById('ai-chat-input').focus();
-            }
-        }
-
-        async function callGeminiAPI(userQuery, retries = 3) {
-            // ★ 自作のバックエンドAPI（chat.js）を呼び出します
-            const url = `/api/chat`;
-            
-            const spotsContext = spotsData.slice(0, 50).map(s => `- ${s.title}: ${s.desc} (エリア: ${s.area})`).join('\n');
-            
-            const systemInstruction = `あなたは広島県三原市の親切でフレンドリーな観光案内人「タコちゃん」です。（三原市はタコが名物です！）
-以下の三原市の観光スポットデータを参考にして、ユーザーの質問に答えてください。
-回答は長くても3〜4文程度にまとめ、スマホで読みやすくしてください。
-一人称は「私」または「タコちゃん」、語尾に「〜タコ！」「〜だタコ」などを自然な範囲で混ぜて、可愛らしく、親しみやすく案内してください。
-データに該当するスポットがあれば優先して紹介し、さらにGoogle検索機能を使って周辺の美味しいランチ情報や行き方なども積極的に補足して楽しく案内してください。
-
-【サイトに掲載されている三原市スポットデータ（一部）】
-${spotsContext}
-`;
-
-            const payload = {
-                contents: [
-                    ...chatHistory,
-                    // ★ 修正: role を明記しないとエラーになる場合があるため追加
-                    { role: "user", parts: [{ text: userQuery }] } 
-                ],
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                tools: [{ "google_search": {} }] // Google検索を有効化
-            };
-
-            const delays = [1000, 2000, 4000, 8000];
-            
-            for (let i = 0; i <= retries; i++) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    // ★ 修正: いきなり .json() でパースせず、まずはテキストとして受け取る
-                    const responseText = await response.text();
-                    let responseData;
-                    
-                    try {
-                        responseData = JSON.parse(responseText);
-                    } catch (parseError) {
-                        // ここでエラーになる場合、裏側のフォルダ配置が間違っている可能性大
-                        console.error("JSONパースエラー:", responseText);
-                        throw new Error(`サーバーの応答が正しくないタコ。chat.jsの配置場所があっているか確認してほしいタコ！(Status: ${response.status})`);
-                    }
-
-                    if (!response.ok) {
-                        throw new Error(`${responseData.error || '通信エラー'} ${responseData.details || ''}`);
-                    }
-                    
-                    const text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (text) {
-                        chatHistory.push({ role: "user", parts: [{ text: userQuery }] });
-                        chatHistory.push({ role: "model", parts: [{ text: text }] });
-                        return text;
-                    } else {
-                        throw new Error("AIからの返答が空っぽだったタコ。");
-                    }
-                } catch (error) {
-                    if (i === retries) {
-                        console.error("Gemini API Error:", error);
-                        // 画面上に詳しいエラー理由を表示させる
-                        return `ごめんタコ〜、通信でエラーが発生したみたいだタコ。<br>（詳細: ${error.message}）<br>もう一度聞いてほしいタコ！`;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
-                }
-            }
-        }
-
-        async function sendChatMessage() {
-            const inputEl = document.getElementById('ai-chat-input');
-            const msg = inputEl.value.trim();
-            if (!msg) return;
-
-            inputEl.value = '';
-            appendChatMessage('user', msg);
-            
-            const sendBtn = document.getElementById('ai-chat-send-btn');
-            sendBtn.disabled = true;
-            inputEl.disabled = true;
-            
-            const loadingId = appendChatLoading();
-            
-            // API呼び出し
-            const aiResponse = await callGeminiAPI(msg);
-            
-            removeChatMessage(loadingId);
-            appendChatMessage('ai', aiResponse);
-            
-            sendBtn.disabled = false;
-            inputEl.disabled = false;
-            inputEl.focus();
-        }
-
-        function appendChatMessage(sender, text) {
-            const messagesEl = document.getElementById('ai-chat-messages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-msg ${sender}-msg`;
-            
-            // 簡易マークダウンパース (太字と改行)
-            let htmlText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-            msgDiv.innerHTML = htmlText;
-            
-            messagesEl.appendChild(msgDiv);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        function appendChatLoading() {
-            const messagesEl = document.getElementById('ai-chat-messages');
-            const msgDiv = document.createElement('div');
-            const id = 'loading-' + Date.now();
-            msgDiv.id = id;
-            msgDiv.className = `chat-msg ai-msg`;
-            msgDiv.innerHTML = '<i class="fa-solid fa-ellipsis fa-fade"></i> 考え中タコ...';
-            messagesEl.appendChild(msgDiv);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-            return id;
-        }
-
-        function removeChatMessage(id) {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-        }
-
         // --- UI更新処理 ---
         function updateUI() {
             const mode = isRPGMode ? 'rpg' : 'normal';
@@ -975,14 +668,6 @@ ${spotsContext}
                 const key = el.getAttribute('data-i18n');
                 if (i18nData[key] && i18nData[key][mode] && i18nData[key][mode][currentLang]) {
                     el.innerHTML = i18nData[key][mode][currentLang];
-                }
-            });
-
-            // チャットのプレースホルダー更新
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-i18n-placeholder');
-                if (i18nData[key] && i18nData[key][mode] && i18nData[key][mode][currentLang]) {
-                    el.setAttribute('placeholder', i18nData[key][mode][currentLang]);
                 }
             });
 
@@ -1271,11 +956,6 @@ ${spotsContext}
         window.addEventListener('load', () => {
             fetchWeather();
             
-            // チャットのエンターキー送信
-            document.getElementById('ai-chat-input').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') sendChatMessage();
-            });
-
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('lang') === 'en' || urlParams.get('lang') === 'jp') {
                 currentLang = urlParams.get('lang');
