@@ -17,8 +17,8 @@ export async function onRequestPost(context) {
       });
     }
     
-    // 一般公開されている最新の安定モデル
-    const model = "gemini-1.5-flash"; 
+    // ★ 修正: 最新の安定モデル「gemini-2.0-flash」に変更（404エラー対策）
+    const model = "gemini-2.0-flash"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
