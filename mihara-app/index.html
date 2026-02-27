@@ -277,7 +277,7 @@
         #ai-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; align-items: flex-end; }
         #ai-chat-btn { 
             width: 70px; height: 70px; border-radius: 50%; 
-            background-color: white; border: 3px solid var(--palette-blue); 
+            background-color: white; border: none; /* ★青い枠線を削除しました */
             cursor: pointer; box-shadow: 0 6px 20px rgba(0,64,152,0.3); 
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             display: flex; justify-content: center; align-items: center; 
@@ -300,12 +300,67 @@
         #ai-chat-input-area { display: flex; padding: 12px; background: white; border-top: 1px solid var(--border-soft); gap: 8px; align-items: center; }
         #ai-chat-input { flex: 1; border: 1px solid var(--border-soft); background: #f1f5f9; border-radius: 24px; padding: 10px 16px; font-size: 13px; outline: none; transition: all 0.3s; font-family: 'Zen Maru Gothic', sans-serif; }
         #ai-chat-input:focus { border-color: var(--palette-blue); background: white; box-shadow: 0 0 0 3px rgba(0,64,152,0.1); }
-        #ai-chat-send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--palette-blue); color: white; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s; flex-shrink: 0; }
+        
+        /* ★ 紙飛行機ボタンのはみ出し防止と位置微調整 */
+        #ai-chat-send-btn { width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: var(--palette-blue); color: white; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s; flex-shrink: 0; font-size: 15px; }
+        #ai-chat-send-btn i { margin-right: 2px; margin-top: 1px; } 
         #ai-chat-send-btn:hover { background: #00337a; }
         #ai-chat-send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
 
+        /* ★ タコちゃんの吹き出しスタイル */
+        .ai-tooltip {
+            position: absolute;
+            bottom: 85px;
+            right: 15px;
+            background-color: white;
+            color: var(--palette-blue);
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 900;
+            box-shadow: 0 4px 15px rgba(0,64,152,0.15);
+            white-space: nowrap;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            transform-origin: bottom right;
+            animation: bounce-tooltip 2.5s infinite ease-in-out;
+            border: 2px solid var(--palette-blue);
+        }
+        .ai-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 20px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--palette-blue);
+        }
+        .ai-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            right: 21px;
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 7px solid white;
+            z-index: 1;
+        }
+        @keyframes bounce-tooltip {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        /* チャットが開いている時は吹き出しを隠す */
+        #ai-chat-widget.open .ai-tooltip {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
         /* RPG Mode for Chat */
-        body.rpg-mode #ai-chat-btn { border: 4px solid #fff !important; border-radius: 4px; box-shadow: 2px 2px 0 #fff; padding: 2px; background: #000; }
+        body.rpg-mode #ai-chat-btn { border: none !important; border-radius: 4px; box-shadow: 2px 2px 0 #fff; padding: 2px; background: #000; }
         body.rpg-mode #ai-chat-btn img { border-radius: 0; image-rendering: pixelated; }
         body.rpg-mode #ai-chat-window { background: #00008b !important; border: 4px double #fff !important; border-radius: 4px; box-shadow: 4px 4px 0 #000; }
         body.rpg-mode #ai-chat-header { background: #000 !important; color: #fff !important; border-bottom: 2px solid #fff; }
@@ -317,6 +372,11 @@
         body.rpg-mode #ai-chat-input { background: #000 !important; border: 2px solid #fff !important; color: #fff !important; border-radius: 0; font-family: 'DotGothic16', sans-serif !important; box-shadow: none; }
         body.rpg-mode #ai-chat-input::placeholder { color: #888; }
         body.rpg-mode #ai-chat-send-btn { background: #000 !important; border: 2px solid #fff !important; color: #ff0 !important; border-radius: 4px; }
+        
+        /* RPGモード時の吹き出し */
+        body.rpg-mode .ai-tooltip { background: #00008b !important; color: #fff !important; border: 3px double #fff !important; border-radius: 4px; box-shadow: 4px 4px 0 #000; animation: none; font-family: 'DotGothic16', sans-serif !important; }
+        body.rpg-mode .ai-tooltip::after { border-top-color: #fff; bottom: -9px; }
+        body.rpg-mode .ai-tooltip::before { display: none; }
     </style>
 </head>
 <body id="top">
@@ -578,6 +638,10 @@
                 <button id="ai-chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
+
+        <!-- ★ タコちゃんの吹き出し（ふわふわ動きます） -->
+        <div id="ai-chat-tooltip" class="ai-tooltip" data-i18n="ai-chat-tooltip">何でも聞いてタコ。</div>
+
         <!-- ★ 右下のフローティングボタン（タコの画像になります） -->
         <button id="ai-chat-btn" onclick="toggleChatWindow()">
             <img src="tako.png" alt="タコちゃん" onerror="this.style.display='none'">
@@ -640,7 +704,7 @@
             'weather-sunrise': { normal: { jp: 'SUNRISE', en: 'SUNRISE' }, rpg: { jp: 'よあけ', en: 'DAWN' } },
             'weather-weekly-toggle': { normal: { jp: '週間天気を見る', en: 'Weekly Forecast' }, rpg: { jp: 'このさきの そらもよう', en: 'Future Skies' } },
 
-            // ★ 画像タコちゃんAIチャット用辞書 (ヘッダーのタイトル)
+            // ★ 画像タコちゃんAIチャット用辞書
             'ai-chat-title': { 
                 normal: { 
                     jp: '<img src="tako.png" class="w-6 h-6 rounded-full mr-2 object-cover border border-white" alt="タコ"><span>三原の案内人タコちゃん</span>', 
@@ -652,7 +716,8 @@
                 } 
             },
             'ai-chat-greeting': { normal: { jp: 'こんにちはタコ！三原市の観光スポットや周辺の美味しいお店について、何でも聞いてほしいタコ！', en: 'Hello! Ask me anything about sightseeing spots or local food in Mihara!' }, rpg: { jp: 'よくぞ きた ゆうしゃよ！ わしは みちびきのタコ。ミハラの ちずの ことなら なんなりと きくタコ。', en: 'Welcome, Hero! Ask me anything about the map of Mihara.' } },
-            'ai-chat-placeholder': { normal: { jp: '質問を入力してください...', en: 'Type your question...' }, rpg: { jp: 'ききたいことを いれるのだ...', en: 'Ask thy question...' } }
+            'ai-chat-placeholder': { normal: { jp: '質問を入力してください...', en: 'Type your question...' }, rpg: { jp: 'ききたいことを いれるのだ...', en: 'Ask thy question...' } },
+            'ai-chat-tooltip': { normal: { jp: '何でも聞いてタコ。', en: 'Ask me anything, Taco!' }, rpg: { jp: 'なんでも きくタコ。', en: 'Ask away, Taco!' } }
         };
 
         // --- ウェザー API 連携機能 ---
@@ -748,7 +813,11 @@
 
         function toggleChatWindow() {
             const windowEl = document.getElementById('ai-chat-window');
+            const widgetEl = document.getElementById('ai-chat-widget');
+            
             windowEl.classList.toggle('hidden');
+            widgetEl.classList.toggle('open'); // ★吹き出しを消すためのクラス切り替え
+            
             if (!windowEl.classList.contains('hidden')) {
                 document.getElementById('ai-chat-input').focus();
             }
