@@ -5,6 +5,7 @@
       Cloudflare Pages & Functions SEO最適化版 v12.0
       - Functions連携: サーバー側でのOGP書き換えに対応
       - 多言語化(i18n): EN/JPスイッチおよびRPG×英語の4パターン対応
+      - 新機能: 天気API (Open-Meteo) を用いたマジックアワー＆天気の自動表示
     -->
 
     <!-- Google tag (gtag.js) -->
@@ -41,7 +42,7 @@
     <meta name="twitter:description" content="広島県三原市の魅力を再発見するフォトマッププロジェクト。">
     <meta name="twitter:image" content="https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg">
 
-    <!-- ★追加：スマホ用ホーム画面アイコン & ファビコン -->
+    <!-- スマホ用ホーム画面アイコン & ファビコン -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="icon" href="apple-touch-icon.png">
 
@@ -303,6 +304,22 @@
         body.rpg-mode #about { padding-bottom: 40px !important; }
         body.rpg-mode #gallery { padding-top: 60px !important; }
         body.rpg-mode #sub-map { color: #1a1a1a !important; text-shadow: none; }
+
+        /* ウェザー＆マジックアワー ウィジェット（通常＆RPG対応） */
+        body.rpg-mode #weather-widget { background: #00008b !important; border: 3px double #fff !important; margin-bottom: 30px; }
+        body.rpg-mode #weather-widget * { border-color: #fff !important; }
+        body.rpg-mode #weather-icon-bg { background: transparent !important; color: #ff0 !important; border: 2px solid #fff !important; box-shadow: none; }
+        body.rpg-mode #weather-temp-text { color: #fff !important; }
+        body.rpg-mode #weather-desc { background: #000 !important; color: #fff !important; border-color: #fff !important; }
+        body.rpg-mode .weather-magic-box { background: #000 !important; border: 1px solid #fff !important; }
+        body.rpg-mode .weather-magic-box .text-orange-500, body.rpg-mode .weather-magic-box .text-orange-400, body.rpg-mode .weather-magic-box .text-blue-400 { color: #f5d76e !important; }
+        body.rpg-mode .weather-magic-box .text-slate-800, body.rpg-mode .weather-magic-box .text-slate-600 { color: #fff !important; }
+
+        /* 週間天気ウィジェット用 */
+        body.rpg-mode #weekly-toggle-wrap { border-color: #fff !important; }
+        body.rpg-mode #weekly-toggle-btn { color: #f5d76e !important; }
+        body.rpg-mode .weekly-day-label { color: #fff !important; }
+        body.rpg-mode #weekly-forecast-list i { color: #fff !important; }
     </style>
 </head>
 <body id="top">
@@ -362,8 +379,53 @@
     <section id="gallery" class="bg-white" style="padding-top: 0;">
         <div class="pt-0 pb-8 px-6 text-center">
             <h3 class="serif-custom text-blue-900 text-2xl mb-4" id="title-map" data-i18n="title-map">PHOTO MAP</h3>
-            <p id="sub-map" class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6" data-i18n="sub-map">Find Your Favorite Spot</p>
+            <p id="sub-map" class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="sub-map">Find Your Favorite Spot</p>
             
+            <!-- ★ ウェザー＆マジックアワー ウィジェット -->
+            <div id="weather-widget" class="bg-white rounded-[12px] p-4 mx-auto mb-8 max-w-[90%] sm:max-w-md shadow-[0_4px_20px_rgba(0,64,152,0.06)] border border-blue-50" style="margin-top: -10px;">
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-50 text-blue-500 rounded-full w-10 h-10 flex items-center justify-center text-lg shadow-inner border border-blue-100" id="weather-icon-bg">
+                            <i id="weather-main-icon" class="fa-solid fa-spinner fa-spin"></i>
+                        </div>
+                        <div class="text-left leading-tight">
+                            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest" data-i18n="weather-mihara">MIHARA WEATHER</span>
+                            <span class="block text-xl font-bold text-blue-900" id="weather-temp-text">--°C</span>
+                        </div>
+                    </div>
+                    <div class="text-[11px] font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm" id="weather-desc">取得中...</div>
+                </div>
+                
+                <div class="weather-magic-box bg-gradient-to-r from-orange-50/80 to-blue-50/80 rounded-[8px] p-3 flex items-center gap-3 border border-orange-100/50">
+                    <div class="w-8 h-8 flex items-center justify-center text-orange-400">
+                        <i class="fa-solid fa-camera-retro text-lg"></i>
+                    </div>
+                    <div class="flex-1 text-left leading-tight">
+                        <span class="block text-[8px] font-bold text-orange-500 uppercase tracking-widest mb-0.5" data-i18n="weather-magic-hour">MAGIC HOUR</span>
+                        <span class="block text-[13px] font-bold text-slate-800" id="magic-hour-text">夕焼けチャンス: --:--</span>
+                    </div>
+                    <div class="text-right border-l border-slate-200 pl-3">
+                        <span class="block text-[8px] font-bold text-blue-400 uppercase tracking-widest mb-0.5" data-i18n="weather-sunrise">SUNRISE</span>
+                        <span class="block text-[13px] font-bold text-slate-600" id="sunrise-text">--:--</span>
+                    </div>
+                </div>
+
+                <!-- 追加: 週間天気アコーディオン -->
+                <div class="mt-3 pt-2 border-t border-dashed border-blue-100" id="weekly-toggle-wrap">
+                    <button onclick="toggleWeeklyWeather()" class="w-full text-[10px] font-bold text-gray-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5" id="weekly-toggle-btn">
+                        <span data-i18n="weather-weekly-toggle">週間天気を見る</span>
+                        <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-300" id="weekly-toggle-icon"></i>
+                    </button>
+                    <div id="weekly-weather-container" class="overflow-hidden transition-all duration-300" style="max-height: 0px; opacity: 0;">
+                        <div class="pt-4 pb-1 flex justify-between gap-1 overflow-x-auto" id="weekly-forecast-list">
+                            <!-- JSで生成されます -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- ウィジェットここまで -->
+
             <div class="view-switch">
                 <div id="btn-view-grid" class="view-btn active" onclick="switchView('grid')">
                     <i class="fa-solid fa-border-all mr-2"></i> <span data-i18n="btn-view-grid-text">PHOTO</span>
@@ -608,8 +670,141 @@
             'footer-copy': { normal: { jp: '&copy; 2026 Mihara Walk Photo Map', en: '&copy; 2026 Mihara Walk Photo Map' }, rpg: { jp: '&copy; 2026 Mihara Quest', en: '&copy; 2026 Mihara Quest' } },
             'modal-map-btn-text': { normal: { jp: 'この場所をGoogleマップで見る', en: 'View on Google Maps' }, rpg: { jp: 'ちずを ひらく', en: 'OPEN WORLD MAP' } },
             'share-label': { normal: { jp: 'SHARE THIS SPOT', en: 'SHARE THIS SPOT' }, rpg: { jp: 'SHARE THIS SPOT', en: 'SEND RAVEN' } },
-            'copy-success-msg': { normal: { jp: 'リンクをコピーしました！', en: 'Link copied to clipboard!' }, rpg: { jp: 'ふしぎなじゅもんを コピーした！', en: 'Thou hast learned a new SPELL! (Copied)' } }
+            'copy-success-msg': { normal: { jp: 'リンクをコピーしました！', en: 'Link copied to clipboard!' }, rpg: { jp: 'ふしぎなじゅもんを コピーした！', en: 'Thou hast learned a new SPELL! (Copied)' } },
+
+            // ★ 新機能：ウェザー・マジックアワー用辞書
+            'weather-mihara': { normal: { jp: '三原市の今の天気', en: 'CURRENT WEATHER' }, rpg: { jp: 'ミハラの そらもよう', en: 'MIHARA SKIES' } },
+            'weather-magic-hour': { normal: { jp: 'MAGIC HOUR', en: 'MAGIC HOUR' }, rpg: { jp: 'ゆうぐれの とき', en: 'TWILIGHT' } },
+            'weather-sunrise': { normal: { jp: 'SUNRISE', en: 'SUNRISE' }, rpg: { jp: 'よあけ', en: 'DAWN' } },
+            'weather-weekly-toggle': { normal: { jp: '週間天気を見る', en: 'Weekly Forecast' }, rpg: { jp: 'このさきの そらもよう', en: 'Future Skies' } },
         };
+
+        // --- ウェザー API 連携機能 ---
+        let weatherDataCache = null;
+
+        async function fetchWeather() {
+            try {
+                // 三原市の緯度経度（おおよそ）
+                const lat = 34.3964;
+                const lng = 133.0781;
+                // 週間天気用のパラメータ(weathercode, temperature_2m_max, min)を追加
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&daily=sunrise,sunset,weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo`;
+                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Weather fetch failed');
+                
+                const data = await response.json();
+                updateWeatherUI(data);
+            } catch (e) {
+                console.error('Weather API Error:', e);
+                document.getElementById('weather-temp-text').textContent = '--°C';
+                document.getElementById('weather-desc').textContent = currentLang === 'en' ? 'Unavailable' : '取得失敗';
+            }
+        }
+
+        function updateWeatherUI(data) {
+            if (data) weatherDataCache = data;
+            else data = weatherDataCache;
+            
+            if (!data) return;
+
+            const current = data.current_weather;
+            const daily = data.daily;
+            
+            // 天気情報の取得を関数化して再利用
+            const currentInfo = getWeatherInfo(current.weathercode, currentLang, isRPGMode);
+
+            document.getElementById('weather-main-icon').className = `fa-solid ${currentInfo.iconClass}`;
+            document.getElementById('weather-temp-text').textContent = `${current.temperature}°C`;
+            document.getElementById('weather-desc').textContent = currentInfo.text;
+
+            // 時間のフォーマット処理（今日のデータ）
+            const todaySunrise = new Date(daily.sunrise[0]);
+            const todaySunset = new Date(daily.sunset[0]);
+
+            const formatTime = (date) => {
+                return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            };
+
+            const sunriseStr = formatTime(todaySunrise);
+            const sunsetStr = formatTime(todaySunset);
+
+            // マジックアワーのテキスト構築
+            let magicHourPreText = '';
+            if (isRPGMode) {
+                magicHourPreText = currentLang === 'en' ? 'Best View: ' : 'シャッターチャンス: ';
+            } else {
+                magicHourPreText = currentLang === 'en' ? 'Sunset Time: ' : '夕焼けチャンス: ';
+            }
+
+            document.getElementById('magic-hour-text').textContent = magicHourPreText + sunsetStr;
+            document.getElementById('sunrise-text').textContent = sunriseStr;
+
+            // 週間天気のレンダリング
+            const weeklyList = document.getElementById('weekly-forecast-list');
+            if(weeklyList) {
+                weeklyList.innerHTML = '';
+                for(let i = 0; i < 7; i++) {
+                    const dObj = new Date(daily.time[i]);
+                    const dayJp = ['日', '月', '火', '水', '木', '金', '土'][dObj.getDay()];
+                    const dayEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dObj.getDay()];
+                    const dayLabel = currentLang === 'en' ? dayEn : dayJp;
+                    const maxT = Math.round(daily.temperature_2m_max[i]);
+                    const minT = Math.round(daily.temperature_2m_min[i]);
+                    const wInfo = getWeatherInfo(daily.weathercode[i], currentLang, isRPGMode);
+                    
+                    const dayEl = document.createElement('div');
+                    dayEl.className = "flex flex-col items-center flex-1 min-w-[42px]";
+                    dayEl.innerHTML = `
+                        <span class="text-[10px] text-gray-400 font-bold mb-1.5 weekly-day-label">${i === 0 ? (currentLang === 'en' ? 'Today' : '今日') : dayLabel}</span>
+                        <i class="fa-solid ${wInfo.iconClass} text-[15px] mb-1.5"></i>
+                        <div class="text-[9px] font-bold flex gap-1.5 mt-auto">
+                            <span class="text-red-400">${maxT}°</span>
+                            <span class="text-blue-500">${minT}°</span>
+                        </div>
+                    `;
+                    weeklyList.appendChild(dayEl);
+                }
+            }
+        }
+
+        // 天気コードからアイコンとテキストを取得する関数
+        function getWeatherInfo(code, lang, isRpg) {
+            let iconClass = 'fa-cloud text-gray-400';
+            let weatherTextJp = '曇り'; let weatherTextEn = 'Cloudy';
+            let weatherTextRpgJp = 'くもり'; let weatherTextRpgEn = 'Cloudy';
+
+            if (code === 0) { iconClass = 'fa-sun text-orange-500'; weatherTextJp = '晴れ'; weatherTextEn = 'Clear'; weatherTextRpgJp = 'はれ'; weatherTextRpgEn = 'Clear'; }
+            else if (code === 1 || code === 2) { iconClass = 'fa-cloud-sun text-orange-400'; weatherTextJp = '晴れ時々曇り'; weatherTextEn = 'Partly Cloudy'; weatherTextRpgJp = 'はれ ときどき くもり'; weatherTextRpgEn = 'Partly Cloudy'; }
+            else if (code === 3) { iconClass = 'fa-cloud text-gray-400'; weatherTextJp = '曇り'; weatherTextEn = 'Cloudy'; weatherTextRpgJp = 'くもり'; weatherTextRpgEn = 'Cloudy'; }
+            else if (code === 45 || code === 48) { iconClass = 'fa-smog text-gray-400'; weatherTextJp = '霧'; weatherTextEn = 'Fog'; weatherTextRpgJp = 'きり'; weatherTextRpgEn = 'Fog'; }
+            else if (code >= 51 && code <= 67) { iconClass = 'fa-umbrella text-blue-500'; weatherTextJp = '雨'; weatherTextEn = 'Rain'; weatherTextRpgJp = 'あめ'; weatherTextRpgEn = 'Rain'; }
+            else if (code >= 71 && code <= 77) { iconClass = 'fa-snowflake text-blue-300'; weatherTextJp = '雪'; weatherTextEn = 'Snow'; weatherTextRpgJp = 'ゆき'; weatherTextRpgEn = 'Snow'; }
+            else if (code >= 80 && code <= 82) { iconClass = 'fa-cloud-showers-heavy text-blue-600'; weatherTextJp = 'にわか雨'; weatherTextEn = 'Showers'; weatherTextRpgJp = 'にわかあめ'; weatherTextRpgEn = 'Showers'; }
+            else if (code >= 95) { iconClass = 'fa-bolt text-yellow-500'; weatherTextJp = '雷雨'; weatherTextEn = 'Thunderstorm'; weatherTextRpgJp = 'らいう'; weatherTextRpgEn = 'Storm'; }
+
+            let textToShow = '';
+            if (isRpg) textToShow = lang === 'en' ? weatherTextRpgEn : weatherTextRpgJp;
+            else textToShow = lang === 'en' ? weatherTextEn : weatherTextJp;
+
+            return { iconClass, text: textToShow };
+        }
+
+        // 週間天気のアコーディオン開閉
+        function toggleWeeklyWeather() {
+            const container = document.getElementById('weekly-weather-container');
+            const icon = document.getElementById('weekly-toggle-icon');
+            if (container.style.maxHeight && container.style.maxHeight !== '0px') {
+                container.style.maxHeight = '0px';
+                container.style.opacity = '0';
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                container.style.maxHeight = '150px';
+                container.style.opacity = '1';
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+        // ------------------------------
 
         // --- UI更新処理 ---
         function updateUI() {
@@ -636,6 +831,9 @@
             document.getElementById('rpg-btn-text').textContent = rpgBtnText;
             document.getElementById('rpg-btn-icon').className = isRPGMode ? 'fa-solid fa-book-open' : 'fa-solid fa-dungeon';
             document.getElementById('lang-text').textContent = currentLang === 'jp' ? 'EN' : 'JP';
+
+            // ★ 天気UIの言語・モード更新
+            updateWeatherUI();
 
             // グリッドやマップの再描画 (言語切替に伴うテキスト更新)
             if(spotsData.length > 0) render(currentActiveArea);
@@ -960,11 +1158,10 @@
             clearUrlParams();
         }
 
-        function generateJsonLd(data) {
-            // 省略: 必要であれば言語に応じて出力を変えることも可能
-        }
-
         window.addEventListener('load', () => {
+            // ★ 初期ロード時に天気を取得
+            fetchWeather();
+
             // 初期言語チェック
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('lang') === 'en' || urlParams.get('lang') === 'jp') {
@@ -999,7 +1196,6 @@
                         return clean;
                     }).filter(s => s.title);
                     
-                    generateJsonLd(spotsData);
                     render('all');
 
                     const targetSpotTitle = urlParams.get('spot');
