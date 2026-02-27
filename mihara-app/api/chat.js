@@ -11,7 +11,9 @@ export async function onRequestPost(context) {
   try {
     // サイトの画面（index.html）から送られてきたチャット履歴を受け取る
     const requestData = await context.request.json();
-    const model = "gemini-2.5-flash-preview-09-2025";
+    
+    // ★ 修正：一般公開されている最新の安定モデル「gemini-1.5-flash」に変更しました
+    const model = "gemini-1.5-flash"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     // GoogleのGeminiサーバーへリクエストを転送する
