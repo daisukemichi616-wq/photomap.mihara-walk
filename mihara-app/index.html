@@ -2,11 +2,9 @@
 <html lang="ja" prefix="og: http://ogp.me/ns#">
 <head>
     <!-- 
-      Cloudflare Pages & Functions SEO最適化版 v16.0
-      - Functions連携: サーバー側でのOGP書き換えに対応
-      - 多言語化(i18n): EN/JPスイッチおよびRPG×英語の4パターン対応
-      - 新機能: 天気API (Open-Meteo) を用いたマジックアワー＆週間天気の自動表示
-      - 新機能: Gemini API連携 三原の案内人タコちゃん (バックエンドAPI経由で安全に通信、UI調整済)
+      Cloudflare Pages & Functions SEO最適化版 v16.1
+      - スマホ画面でのチャット入力欄はみ出し問題を修正
+      - API通信のエラーハンドリングを強化し、原因を詳細表示
     -->
 
     <!-- Google tag (gtag.js) -->
@@ -75,6 +73,11 @@
             --text-main: #1a1a1a;
             --text-sub: #4b5563;
             --border-soft: #e2e8f0;
+        }
+
+        /* ★ 追加: スマホ画面ではみ出さないための全体設定 */
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
 
         html { scroll-behavior: smooth; }
@@ -277,11 +280,11 @@
         #ai-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; align-items: flex-end; }
         #ai-chat-btn { 
             width: 70px; height: 70px; border-radius: 50%; 
-            background-color: white; border: none; /* ★青い枠線を削除 */
+            background-color: white; border: none; 
             cursor: pointer; box-shadow: 0 6px 20px rgba(0,64,152,0.3); 
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             display: flex; justify-content: center; align-items: center; 
-            padding: 0; overflow: hidden; /* 画像を丸く切り抜く */
+            padding: 0; overflow: hidden; 
         }
         #ai-chat-btn img { width: 100%; height: 100%; object-fit: cover; }
         #ai-chat-btn:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 8px 25px rgba(0,64,152,0.4); }
@@ -297,20 +300,27 @@
         .user-msg { background: var(--palette-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 2px 5px rgba(0,64,152,0.2); }
         .chat-msg strong { color: var(--palette-blue); font-weight: 900; }
         .user-msg strong { color: #f5d76e; }
-        #ai-chat-input-area { display: flex; padding: 12px; background: white; border-top: 1px solid var(--border-soft); gap: 8px; align-items: center; }
-        #ai-chat-input { flex: 1; border: 1px solid var(--border-soft); background: #f1f5f9; border-radius: 24px; padding: 10px 16px; font-size: 13px; outline: none; transition: all 0.3s; font-family: 'Zen Maru Gothic', sans-serif; }
+        
+        /* ★ 修正: スマホではみ出さないための入力エリア調整 */
+        #ai-chat-input-area { 
+            display: flex; padding: 12px; background: white; border-top: 1px solid var(--border-soft); gap: 8px; align-items: center; 
+            width: 100%; box-sizing: border-box; /* コンテナ幅を厳密に守る */
+        }
+        #ai-chat-input { 
+            flex: 1; min-width: 0; /* フレックスアイテムの不要な広がりを防止 */
+            border: 1px solid var(--border-soft); background: #f1f5f9; border-radius: 24px; padding: 10px 16px; font-size: 13px; outline: none; transition: all 0.3s; font-family: 'Zen Maru Gothic', sans-serif; 
+        }
         #ai-chat-input:focus { border-color: var(--palette-blue); background: white; box-shadow: 0 0 0 3px rgba(0,64,152,0.1); }
         
-        /* ★ 紙飛行機ボタンのはみ出し防止と位置微調整 */
+        /* ★ 修正: 紙飛行機ボタンの微調整 */
         #ai-chat-send-btn { 
-            width: 40px; height: 40px; min-width: 40px; 
+            width: 40px; height: 40px; min-width: 40px; flex-shrink: 0; /* 絶対に縮まない・広がらない */
             border-radius: 50%; background: var(--palette-blue); color: white; border: none; 
             cursor: pointer; display: flex; justify-content: center; align-items: center; 
-            transition: background 0.2s; flex-shrink: 0; font-size: 15px; 
-            padding: 0; box-sizing: border-box;
+            transition: background 0.2s; font-size: 15px; padding: 0; box-sizing: border-box;
         }
         #ai-chat-send-btn i { 
-            transform: translate(-1px, 1px); /* アイコンを少し左下にずらして中央に見せる */
+            transform: translate(-1px, 1px); /* アイコンを少し左下にずらして視覚的に中央にする */
         }
         #ai-chat-send-btn:hover { background: #00337a; }
         #ai-chat-send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
@@ -824,18 +834,17 @@
             const widgetEl = document.getElementById('ai-chat-widget');
             
             windowEl.classList.toggle('hidden');
-            widgetEl.classList.toggle('open'); // ★吹き出しを消すためのクラス切り替え
+            widgetEl.classList.toggle('open'); // 吹き出しを消す
             
             if (!windowEl.classList.contains('hidden')) {
                 document.getElementById('ai-chat-input').focus();
             }
         }
 
-        async function callGeminiAPI(userQuery, retries = 5) {
-            // ★ 自作のバックエンドAPI（chat.js）を呼び出します（APIキーは裏側に隠れます）
+        async function callGeminiAPI(userQuery, retries = 3) {
+            // ★ 自作のバックエンドAPI（chat.js）を呼び出します
             const url = `/api/chat`;
             
-            // CSVデータからAIに教えるための簡易リストを作成（トークン節約のため主要項目のみ）
             const spotsContext = spotsData.slice(0, 50).map(s => `- ${s.title}: ${s.desc} (エリア: ${s.area})`).join('\n');
             
             const systemInstruction = `あなたは広島県三原市の親切でフレンドリーな観光案内人「タコちゃん」です。（三原市はタコが名物です！）
@@ -851,13 +860,14 @@ ${spotsContext}
             const payload = {
                 contents: [
                     ...chatHistory,
-                    { parts: [{ text: userQuery }] }
+                    // ★ 修正: role を明記しないとエラーになる場合があるため追加
+                    { role: "user", parts: [{ text: userQuery }] } 
                 ],
                 systemInstruction: { parts: [{ text: systemInstruction }] },
-                tools: [{ "google_search": {} }] // ★ Google検索（グラウンディング）を有効化
+                tools: [{ "google_search": {} }] // Google検索を有効化
             };
 
-            const delays = [1000, 2000, 4000, 8000, 16000];
+            const delays = [1000, 2000, 4000, 8000];
             
             for (let i = 0; i <= retries; i++) {
                 try {
@@ -867,11 +877,20 @@ ${spotsContext}
                         body: JSON.stringify(payload)
                     });
                     
-                    const responseData = await response.json();
+                    // ★ 修正: いきなり .json() でパースせず、まずはテキストとして受け取る
+                    const responseText = await response.text();
+                    let responseData;
+                    
+                    try {
+                        responseData = JSON.parse(responseText);
+                    } catch (parseError) {
+                        // ここでエラーになる場合、裏側のフォルダ配置が間違っている可能性大
+                        console.error("JSONパースエラー:", responseText);
+                        throw new Error(`サーバーの応答が正しくないタコ。chat.jsの配置場所があっているか確認してほしいタコ！(Status: ${response.status})`);
+                    }
 
-                    // 万が一エラーが返ってきたら、その理由を拾い上げる
                     if (!response.ok) {
-                        throw new Error(`エラーコード: ${response.status} / 理由: ${responseData.error || ''} ${responseData.details || ''}`);
+                        throw new Error(`${responseData.error || '通信エラー'} ${responseData.details || ''}`);
                     }
                     
                     const text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -885,8 +904,8 @@ ${spotsContext}
                 } catch (error) {
                     if (i === retries) {
                         console.error("Gemini API Error:", error);
-                        // ★ エラーの「具体的な原因」をタコちゃんが喋るようにしました！
-                        return `ごめんタコ〜、エラーが発生したみたいだタコ。（詳細: ${error.message}）もう一度聞いてほしいタコ！`;
+                        // 画面上に詳しいエラー理由を表示させる
+                        return `ごめんタコ〜、通信でエラーが発生したみたいだタコ。<br>（詳細: ${error.message}）<br>もう一度聞いてほしいタコ！`;
                     }
                     await new Promise(resolve => setTimeout(resolve, delays[i]));
                 }
