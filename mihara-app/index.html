@@ -6,7 +6,7 @@
       - Functions連携: サーバー側でのOGP書き換えに対応
       - 多言語化(i18n): EN/JPスイッチおよびRPG×英語の4パターン対応
       - 新機能: 天気API (Open-Meteo) を用いたマジックアワー＆週間天気の自動表示
-      - 追加機能: 「親子でお散歩」特化型の横スライド・ローカルインサイト（専用CSV読み込み＆PCドラッグ対応＆マップ連動）
+      - 追加機能: 「親子でお散歩」縦型スライド・大型マップ・大型写真モーダル・ボタン表記統一
     -->
 
     <!-- Google tag (gtag.js) -->
@@ -56,7 +56,7 @@
     
     <!-- CSS / Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <!-- Leaflet -->
@@ -269,7 +269,8 @@
             .local-card-horizontal { flex: 0 0 31%; scroll-snap-align: start; }
         }
 
-        .local-card-img-wrap { position: relative; width: 100%; aspect-ratio: 4/3; background: #f1f5f9; overflow: hidden; pointer-events: none; }
+        /* ▼ 縦長写真枠 (3:4) */
+        .local-card-img-wrap { position: relative; width: 100%; aspect-ratio: 3/4; background: #f1f5f9; overflow: hidden; pointer-events: none; }
         .local-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; pointer-events: none; }
         .local-card-horizontal:hover .local-card-img-wrap img { transform: scale(1.05); }
         
@@ -283,10 +284,10 @@
         .local-area { font-size: 10px; font-weight: 700; color: #9ca3af; letter-spacing: 0.1em; text-transform: uppercase; }
         .local-btn { font-size: 10px; font-weight: 700; color: var(--palette-blue); display: flex; align-items: center; gap: 4px; }
         
-        /* --- ローカルインサイト用 マップとカードの連動スタイル --- */
+        /* ▼ ローカルインサイト用 マップとカードの連動スタイル (PCで高さ拡大) */
         #local-map-container {
-            height: 40vh;
-            min-height: 350px;
+            height: 50vh;
+            min-height: 400px;
             width: 100%;
             border-radius: 12px;
             border: 1px solid var(--border-soft);
@@ -294,6 +295,12 @@
             z-index: 1;
             box-shadow: 0 8px 25px rgba(0,0,0,0.03);
             display: none; /* 初期は非表示 */
+        }
+        @media (min-width: 1024px) {
+            #local-map-container {
+                height: 65vh; /* PCではより大きく */
+                min-height: 550px;
+            }
         }
         body.rpg-mode #local-map-container {
             border: 3px double #fff !important;
@@ -329,7 +336,10 @@
         .share-btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
         .share-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; color: #64748b; font-size: 16px; transition: all 0.3s; text-decoration: none; border: 1px solid transparent; }
         .share-btn:hover { transform: translateY(-2px); color: white; }
-        .share-btn.x-twitter:hover { background: #000; color: #fff; }
+        
+        /* ▼ X(Twitter) アイコンのスタイルを明記して確実に表示させる */
+        .share-btn.x-twitter:hover { background: #000; color: #fff !important; }
+        
         #copy-success-msg { font-size: 10px; font-weight: bold; color: var(--palette-blue); opacity: 0; transition: opacity 0.3s ease; height: 14px; }
         #copy-success-msg.show { opacity: 1; }
 
@@ -548,7 +558,7 @@
 
     <!-- イメージ -->
     <div class="img-divider-box">
-        <img src="https://i.postimg.cc/FFc54tpJ/IMG-9587.jpg" alt="SUNAMI BEACH PARK" onerror="this.style.display='none'">
+        <img src="https://i.postimg.cc/FFc54tpJ/IMG-9587.jpg" alt="SUNAMI BEACH PARK" onerror="this.onerror=null; this.style.display='none'">
         <div class="img-divider-content">
             <span class="text-white text-[10px] font-bold tracking-widest bg-black/40 p-2 rounded uppercase shadow-xl">SUNAMI BEACH PARK</span>
         </div>
@@ -577,7 +587,7 @@
     </section>
 
     <section class="bottom-view-container">
-        <img src="https://i.postimg.cc/Df1DNrfM/IMG-9590.jpg" alt="三原港パノラマ" onerror="this.style.display='none'">
+        <img src="https://i.postimg.cc/Df1DNrfM/IMG-9590.jpg" alt="三原港パノラマ" onerror="this.onerror=null; this.style.display='none'">
         <div class="bottom-view-overlay">
             <div class="floating-badge">
                 <p class="serif-custom italic text-2xl mb-1 text-white">Beautiful Mihara,</p>
@@ -595,7 +605,10 @@
     <div id="photo-modal" class="modal-wrap">
         <button id="modal-close-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
         <div id="modal-content-area" class="max-w-[600px] mx-auto pb-24 bg-white min-h-screen sm:min-h-0">
-            <img id="modal-img" src="" class="w-full aspect-square object-cover" onerror="this.style.display='none'">
+            
+            <!-- ▼ 写真を一番上に大きく（横幅いっぱいに広げて）表示するエリア -->
+            <img id="modal-img" src="" class="w-full aspect-[4/5] sm:aspect-square object-cover" alt="Photo" onerror="this.onerror=null; this.style.display='none'">
+            
             <div class="px-8 py-12 text-left">
                 <span id="modal-area" class="text-[9px] font-bold tracking-widest text-blue-600 border border-blue-600 px-3 py-1 mb-6 inline-block uppercase">AREA</span>
                 <h2 id="modal-title" class="serif-custom text-2xl mb-4 leading-normal text-slate-800">タイトル</h2>
@@ -607,7 +620,9 @@
                 </a>
 
                 <div class="flex items-center justify-between border-t border-slate-200 pt-8 mb-8">
+                    <!-- ▼ 撮影者名が反映される場所 -->
                     <span id="modal-author" class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">PHOTO BY 管理者</span>
+                    <!-- ▼ SNSリンクが反映される場所 -->
                     <a id="modal-sns" href="#" target="_blank" rel="noopener noreferrer" class="text-gray-900 font-bold text-[10px] border-b border-gray-900 pb-1 uppercase hover:opacity-70 transition">Instagram Link</a>
                 </div>
 
@@ -702,8 +717,10 @@
                 updateWeatherUI(data);
             } catch (e) {
                 console.error('Weather API Error:', e);
-                document.getElementById('weather-temp-text').textContent = '--°C';
-                document.getElementById('weather-desc').textContent = currentLang === 'en' ? 'Unavailable' : '取得失敗';
+                const tempEl = document.getElementById('weather-temp-text');
+                if (tempEl) tempEl.textContent = '--°C';
+                const descEl = document.getElementById('weather-desc');
+                if (descEl) descEl.textContent = currentLang === 'en' ? 'Unavailable' : '取得失敗';
             }
         }
 
@@ -712,45 +729,49 @@
             else data = weatherDataCache;
             if (!data) return;
 
-            const current = data.current_weather;
-            const daily = data.daily;
-            const currentInfo = getWeatherInfo(current.weathercode, currentLang, isRPGMode);
+            try {
+                const current = data.current_weather;
+                const daily = data.daily;
+                const currentInfo = getWeatherInfo(current.weathercode, currentLang, isRPGMode);
 
-            document.getElementById('weather-main-icon').className = `fa-solid ${currentInfo.iconClass}`;
-            document.getElementById('weather-temp-text').textContent = `${current.temperature}°C`;
-            document.getElementById('weather-desc').textContent = currentInfo.text;
+                document.getElementById('weather-main-icon').className = `fa-solid ${currentInfo.iconClass}`;
+                document.getElementById('weather-temp-text').textContent = `${current.temperature}°C`;
+                document.getElementById('weather-desc').textContent = currentInfo.text;
 
-            const formatTime = (date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-            const sunriseStr = formatTime(new Date(daily.sunrise[0]));
-            const sunsetStr = formatTime(new Date(daily.sunset[0]));
+                const formatTime = (date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                const sunriseStr = formatTime(new Date(daily.sunrise[0]));
+                const sunsetStr = formatTime(new Date(daily.sunset[0]));
 
-            let magicHourPreText = isRPGMode ? (currentLang === 'en' ? 'Best View: ' : 'シャッターチャンス: ') : (currentLang === 'en' ? 'Sunset Time: ' : '夕焼けチャンス: ');
-            document.getElementById('magic-hour-text').textContent = magicHourPreText + sunsetStr;
-            document.getElementById('sunrise-text').textContent = sunriseStr;
+                let magicHourPreText = isRPGMode ? (currentLang === 'en' ? 'Best View: ' : 'シャッターチャンス: ') : (currentLang === 'en' ? 'Sunset Time: ' : '夕焼けチャンス: ');
+                document.getElementById('magic-hour-text').textContent = magicHourPreText + sunsetStr;
+                document.getElementById('sunrise-text').textContent = sunriseStr;
 
-            const weeklyList = document.getElementById('weekly-forecast-list');
-            if(weeklyList) {
-                weeklyList.innerHTML = '';
-                for(let i = 0; i < 7; i++) {
-                    const dObj = new Date(daily.time[i]);
-                    const dayJp = ['日', '月', '火', '水', '木', '金', '土'][dObj.getDay()];
-                    const dayEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dObj.getDay()];
-                    const dayLabel = currentLang === 'en' ? dayEn : dayJp;
-                    const maxT = Math.round(daily.temperature_2m_max[i]);
-                    const minT = Math.round(daily.temperature_2m_min[i]);
-                    const wInfo = getWeatherInfo(daily.weathercode[i], currentLang, isRPGMode);
-                    
-                    const dayEl = document.createElement('div');
-                    dayEl.className = "flex flex-col items-center flex-1 min-w-[42px]";
-                    dayEl.innerHTML = `
-                        <span class="text-[10px] text-gray-400 font-bold mb-1.5 weekly-day-label">${i === 0 ? (currentLang === 'en' ? 'Today' : '今日') : dayLabel}</span>
-                        <i class="fa-solid ${wInfo.iconClass} text-[15px] mb-1.5"></i>
-                        <div class="text-[9px] font-bold flex gap-1.5 mt-auto">
-                            <span class="text-red-400">${maxT}°</span><span class="text-blue-500">${minT}°</span>
-                        </div>
-                    `;
-                    weeklyList.appendChild(dayEl);
+                const weeklyList = document.getElementById('weekly-forecast-list');
+                if(weeklyList) {
+                    weeklyList.innerHTML = '';
+                    for(let i = 0; i < 7; i++) {
+                        const dObj = new Date(daily.time[i]);
+                        const dayJp = ['日', '月', '火', '水', '木', '金', '土'][dObj.getDay()];
+                        const dayEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dObj.getDay()];
+                        const dayLabel = currentLang === 'en' ? dayEn : dayJp;
+                        const maxT = Math.round(daily.temperature_2m_max[i]);
+                        const minT = Math.round(daily.temperature_2m_min[i]);
+                        const wInfo = getWeatherInfo(daily.weathercode[i], currentLang, isRPGMode);
+                        
+                        const dayEl = document.createElement('div');
+                        dayEl.className = "flex flex-col items-center flex-1 min-w-[42px]";
+                        dayEl.innerHTML = `
+                            <span class="text-[10px] text-gray-400 font-bold mb-1.5 weekly-day-label">${i === 0 ? (currentLang === 'en' ? 'Today' : '今日') : dayLabel}</span>
+                            <i class="fa-solid ${wInfo.iconClass} text-[15px] mb-1.5"></i>
+                            <div class="text-[9px] font-bold flex gap-1.5 mt-auto">
+                                <span class="text-red-400">${maxT}°</span><span class="text-blue-500">${minT}°</span>
+                            </div>
+                        `;
+                        weeklyList.appendChild(dayEl);
+                    }
                 }
+            } catch(e) {
+                console.warn('Weather UI Error:', e);
             }
         }
 
@@ -771,10 +792,12 @@
         function toggleWeeklyWeather() {
             const container = document.getElementById('weekly-weather-container');
             const icon = document.getElementById('weekly-toggle-icon');
-            if (container.style.maxHeight && container.style.maxHeight !== '0px') {
-                container.style.maxHeight = '0px'; container.style.opacity = '0'; icon.style.transform = 'rotate(0deg)';
-            } else {
-                container.style.maxHeight = '150px'; container.style.opacity = '1'; icon.style.transform = 'rotate(180deg)';
+            if (container && icon) {
+                if (container.style.maxHeight && container.style.maxHeight !== '0px') {
+                    container.style.maxHeight = '0px'; container.style.opacity = '0'; icon.style.transform = 'rotate(0deg)';
+                } else {
+                    container.style.maxHeight = '150px'; container.style.opacity = '1'; icon.style.transform = 'rotate(180deg)';
+                }
             }
         }
 
@@ -807,7 +830,7 @@
             renderLocalInsights(); 
             
             const modal = document.getElementById('photo-modal');
-            if (modal.classList.contains('active') && modal._currentSpot) {
+            if (modal && modal.classList.contains('active') && modal._currentSpot) {
                 updateModalText(modal._currentSpot);
             }
         }
@@ -849,13 +872,15 @@
         }
 
         let currentSlide = 0;
-        const slides = document.querySelectorAll('.slide');
+        let slideInterval;
         function rotateSlides() {
+            const slides = document.querySelectorAll('.slide');
             if (slides.length < 2) return;
-            setInterval(() => {
-                slides[currentSlide].classList.remove('active');
+            if (slideInterval) clearInterval(slideInterval);
+            slideInterval = setInterval(() => {
+                if (slides[currentSlide]) slides[currentSlide].classList.remove('active');
                 currentSlide = (currentSlide + 1) % slides.length;
-                slides[currentSlide].classList.add('active');
+                if (slides[currentSlide]) slides[currentSlide].classList.add('active');
             }, 6000);
         }
 
@@ -901,11 +926,15 @@
             const btnMap = document.getElementById('btn-view-map');
             
             if (mode === 'grid') {
-                gridWrap.style.display = 'block'; mapContainer.classList.remove('active');
-                btnGrid.classList.add('active'); btnMap.classList.remove('active');
+                if (gridWrap) gridWrap.style.display = 'block'; 
+                if (mapContainer) mapContainer.classList.remove('active');
+                if (btnGrid) btnGrid.classList.add('active'); 
+                if (btnMap) btnMap.classList.remove('active');
             } else {
-                gridWrap.style.display = 'none'; mapContainer.classList.add('active');
-                btnGrid.classList.remove('active'); btnMap.classList.add('active');
+                if (gridWrap) gridWrap.style.display = 'none'; 
+                if (mapContainer) mapContainer.classList.add('active');
+                if (btnGrid) btnGrid.classList.remove('active'); 
+                if (btnMap) btnMap.classList.add('active');
                 if (!mapInstance) initMap(); else setTimeout(() => { mapInstance.invalidateSize(); }, 200);
                 updateMapMarkers();
             }
@@ -932,13 +961,15 @@
 
                     const imgUrl = formatDriveUrl(spot.image, 'w500');
                     const areaLabel = areaLabels[spot.area] ? areaLabels[spot.area][currentLang] : (currentLang==='en'?'MIHARA':'三原');
+                    
+                    const safeTitle = (spot.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
                     const popupContent = `
-                        <div onclick="openModalFromMap('${spot.title.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-                            <div class="popup-img-wrap"><img src="${imgUrl}" class="popup-img" onerror="this.src='https://placehold.co/200x130/e2e8f0/94a3b8?text=No+Image';"></div>
+                        <div onclick="openModalFromMap('${safeTitle}')" style="cursor:pointer;">
+                            <div class="popup-img-wrap"><img src="${imgUrl}" class="popup-img" onerror="this.onerror=null; this.src='https://placehold.co/200x130/e2e8f0/94a3b8?text=No+Image';"></div>
                             <div class="popup-info">
                                 <span class="popup-area">${areaLabel}</span>
                                 <div class="popup-title">${getLocalizedSpotField(spot, 'title')}</div>
-                                <div class="popup-more">${currentLang === 'en' ? 'Details' : '詳細を見る'} <i class="fa-solid fa-chevron-right text-[8px]"></i></div>
+                                <div class="popup-more">${currentLang === 'en' ? 'Details' : '詳細を見る'} <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i></div>
                             </div>
                         </div>`;
                     markersClusterGroup.addLayer(L.marker([lat, lng]).bindPopup(popupContent));
@@ -960,13 +991,15 @@
             const filtered = filter === 'all' ? [...spotsData] : spotsData.filter(s => s.area === filter);
             currentFilteredData = filtered.reverse();
 
-            grid.innerHTML = '';
+            if (grid) grid.innerHTML = '';
             displayedCount = 0;
 
             if (currentFilteredData.length === 0) {
-                grid.innerHTML = `<div class="col-span-3 py-32 text-center text-[10px] font-bold text-gray-300 uppercase tracking-widest">${currentLang === 'en' ? 'No Items Found' : 'データがありません'}</div>`;
-                loadMoreArea.classList.add('hidden');
-            } else loadMoreItems();
+                if (grid) grid.innerHTML = `<div class="col-span-3 py-32 text-center text-[10px] font-bold text-gray-300 uppercase tracking-widest">${currentLang === 'en' ? 'No Items Found' : 'データがありません'}</div>`;
+                if (loadMoreArea) loadMoreArea.classList.add('hidden');
+            } else {
+                loadMoreItems();
+            }
 
             if (currentViewMode === 'map') updateMapMarkers();
         }
@@ -978,6 +1011,8 @@
         function loadMoreItems() {
             const grid = document.getElementById('gallery-grid');
             const loadMoreArea = document.getElementById('load-more-area');
+            if (!grid) return;
+
             const nextItems = currentFilteredData.slice(displayedCount, displayedCount + ITEMS_PER_PAGE);
 
             nextItems.forEach(spot => {
@@ -987,7 +1022,7 @@
                 item.className = 'photo-item';
                 item.onclick = () => openModal(spot);
                 item.innerHTML = `
-                    <img src="${img}" loading="lazy" alt="${getLocalizedSpotField(spot, 'title')}" onerror="this.parentElement.classList.add('error-img')">
+                    <img src="${img}" loading="lazy" alt="${getLocalizedSpotField(spot, 'title')}" onerror="this.onerror=null; this.parentElement.classList.add('error-img')">
                     <div class="photo-overlay">
                         <span class="text-[9px] text-white font-bold tracking-widest uppercase mb-1">${areaName}</span>
                         <span class="text-sm text-white font-bold serif-custom drop-shadow-md">${getLocalizedSpotField(spot, 'title')}</span>
@@ -997,8 +1032,10 @@
                 itemObserver.observe(item);
             });
             displayedCount += nextItems.length;
-            if (displayedCount < currentFilteredData.length) loadMoreArea.classList.remove('hidden');
-            else loadMoreArea.classList.add('hidden');
+            if (loadMoreArea) {
+                if (displayedCount < currentFilteredData.length) loadMoreArea.classList.remove('hidden');
+                else loadMoreArea.classList.add('hidden');
+            }
         }
 
         // --- 親子でお散歩・横スクロール＆マップ連動描画 ---
@@ -1018,6 +1055,7 @@
         function renderLocalInsights() {
             const container = document.getElementById('local-scroll-container');
             const mapContainer = document.getElementById('local-map-container');
+            if (!container) return;
             container.innerHTML = '';
 
             // データがまだ無い場合の「枠だけ」表示
@@ -1033,13 +1071,13 @@
                 if (el && i18nData['local-empty'][mode][currentLang]) {
                     el.innerHTML = i18nData['local-empty'][mode][currentLang];
                 }
-                mapContainer.style.display = 'none'; // データがない時はマップ非表示
+                if (mapContainer) mapContainer.style.display = 'none';
                 return;
             }
 
-            mapContainer.style.display = 'block';
+            if (mapContainer) mapContainer.style.display = 'block';
             if (!localMapInstance) initLocalMap();
-            localMarkersGroup.clearLayers();
+            if (localMarkersGroup) localMarkersGroup.clearLayers();
             localMarkersMap = {};
             let hasMarkers = false;
 
@@ -1083,17 +1121,18 @@
                     openModal(modalSpotData);
                 }; 
 
+                // ▼ カード下のボタンを「詳細を見る >」に統一
                 card.innerHTML = `
                     <div class="local-card-img-wrap">
                         <div class="local-tag-badge">${tag}</div>
-                        <img src="${imgUrl}" loading="lazy" alt="${title}" onerror="this.src='https://placehold.co/400x300/e2e8f0/94a3b8?text=No+Image';">
+                        <img src="${imgUrl}" loading="lazy" alt="${title}" onerror="this.onerror=null; this.src='https://placehold.co/400x533/e2e8f0/94a3b8?text=No+Image';">
                     </div>
                     <div class="local-card-content">
                         <h4 class="local-card-title">${title}</h4>
                         <p class="local-card-desc">${desc}</p>
                         <div class="local-card-footer">
                             <span class="local-area"><i class="fa-solid fa-location-dot mr-1"></i> ${areaLabel}</span>
-                            <span class="local-btn">${lang === 'en' ? 'View Details' : '詳細を見る'} <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                            <span class="local-btn">${lang === 'en' ? 'Details' : '詳細を見る'} <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></span>
                         </div>
                     </div>
                 `;
@@ -1106,30 +1145,35 @@
                     if (!isNaN(lat) && !isNaN(lng)) {
                         hasMarkers = true;
                         const popupImgUrl = formatDriveUrl(spot.image, 'w500');
+                        const safeTitle = (spot.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
+                        
+                        // ▼ ポップアップ内のボタンを「詳細を見る >」に統一
                         const popupContent = `
-                            <div style="cursor:pointer;" onclick="scrollToLocalCard('${spot.title.replace(/'/g, "\\'")}')">
-                                <div class="popup-img-wrap"><img src="${popupImgUrl}" class="popup-img" onerror="this.src='https://placehold.co/200x130/e2e8f0/94a3b8?text=No+Image';"></div>
+                            <div style="cursor:pointer;" onclick="scrollToLocalCard('${safeTitle}')">
+                                <div class="popup-img-wrap"><img src="${popupImgUrl}" class="popup-img" onerror="this.onerror=null; this.src='https://placehold.co/200x130/e2e8f0/94a3b8?text=No+Image';"></div>
                                 <div class="popup-info">
                                     <span class="popup-area">${areaLabel}</span>
                                     <div class="popup-title">${title}</div>
-                                    <div class="popup-more">${lang === 'en' ? 'View on Card' : 'カードで見る'} <i class="fa-solid fa-arrow-up text-[8px]"></i></div>
+                                    <div class="popup-more">${lang === 'en' ? 'Details' : '詳細を見る'} <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i></div>
                                 </div>
                             </div>`;
                         
-                        const marker = L.marker([lat, lng]).bindPopup(popupContent);
-                        localMarkersGroup.addLayer(marker);
-                        localMarkersMap[spot.title] = marker;
+                        if (localMarkersGroup) {
+                            const marker = L.marker([lat, lng]).bindPopup(popupContent);
+                            localMarkersGroup.addLayer(marker);
+                            localMarkersMap[spot.title] = marker;
 
-                        // ピンクリック時にカードへスクロール
-                        marker.on('click', () => {
-                            scrollToLocalCard(spot.title);
-                        });
+                            // ピンクリック時にカードへスクロール
+                            marker.on('click', () => {
+                                scrollToLocalCard(spot.title);
+                            });
+                        }
                     }
                 }
             });
 
             // マップのサイズ調整と初期位置
-            if (hasMarkers) {
+            if (hasMarkers && localMapInstance && localMarkersGroup) {
                 setTimeout(() => {
                     localMapInstance.invalidateSize();
                     localMapInstance.fitBounds(localMarkersGroup.getBounds(), { padding: [30, 30], maxZoom: 14 });
@@ -1143,7 +1187,12 @@
         // --- マップ連動用：指定したカードまで横スクロールする関数 ---
         window.scrollToLocalCard = function(title) {
             const container = document.getElementById('local-scroll-container');
-            const targetCard = container.querySelector(`.local-card-horizontal[data-title="${title}"]`);
+            if (!container) return;
+            
+            // CSSセレクタでエスケープが必要な文字を処理
+            const safeSelector = title.replace(/"/g, '\\"');
+            const targetCard = container.querySelector(`.local-card-horizontal[data-title="${safeSelector}"]`);
+            
             if (targetCard) {
                 const scrollPos = targetCard.offsetLeft - container.offsetLeft - (container.clientWidth / 2) + (targetCard.clientWidth / 2);
                 container.scrollTo({ left: scrollPos, behavior: 'smooth' });
@@ -1152,43 +1201,6 @@
                 targetCard.classList.add('active-card');
             }
         };
-
-        // --- PC用：マウストラッグでの横スクロール制御 ---
-        const scrollContainer = document.getElementById('local-scroll-container');
-        let isDown = false;
-        let startX;
-        let scrollLeft;
-        let isDragged = false; // クリックかドラッグかを判定
-
-        scrollContainer.addEventListener('mousedown', (e) => {
-            isDown = true;
-            isDragged = false;
-            scrollContainer.classList.add('active');
-            scrollContainer.style.scrollSnapType = 'none'; // ドラッグ中はスナップを無効化して滑らかに
-            startX = e.pageX - scrollContainer.offsetLeft;
-            scrollLeft = scrollContainer.scrollLeft;
-        });
-
-        scrollContainer.addEventListener('mouseleave', () => {
-            isDown = false;
-            scrollContainer.classList.remove('active');
-            scrollContainer.style.scrollSnapType = 'x mandatory';
-        });
-
-        scrollContainer.addEventListener('mouseup', () => {
-            isDown = false;
-            scrollContainer.classList.remove('active');
-            scrollContainer.style.scrollSnapType = 'x mandatory';
-        });
-
-        scrollContainer.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault();
-            const x = e.pageX - scrollContainer.offsetLeft;
-            const walk = (x - startX) * 1.5; // スクロールの速さ
-            if (Math.abs(walk) > 5) isDragged = true; // 5px以上動かしたらドラッグと判定
-            scrollContainer.scrollLeft = scrollLeft - walk;
-        });
 
         // --- URLとモーダルの連動 ---
         function updateUrlParams(spotTitle) {
@@ -1239,27 +1251,43 @@
             document.getElementById('modal-desc').innerHTML = getLocalizedSpotField(spot, 'desc').replace(/\n/g, '<br>');
             const areaKey = spot.area || 'all';
             document.getElementById('modal-area').textContent = areaLabels[areaKey] ? areaLabels[areaKey][currentLang] : (currentLang === 'en' ? 'MIHARA' : '三原');
+            
+            // ▼ 撮影者名の処理（スプレッドシートの author 列を優先）
             document.getElementById('modal-author').textContent = 'PHOTO BY ' + (spot.author || spot.nickname || spot.name || (currentLang === 'en' ? 'Admin' : '管理者'));
         }
 
+        // --- モーダル ---
         function openModal(spot) {
             const modalImg = document.getElementById('modal-img');
-            modalImg.style.display = 'block'; 
-            modalImg.src = formatDriveUrl(spot.image, 'w1600');
-            modalImg.alt = getLocalizedSpotField(spot, 'title');
+            if (modalImg) {
+                modalImg.style.display = 'block'; 
+                modalImg.src = formatDriveUrl(spot.image, 'w1600');
+                modalImg.alt = getLocalizedSpotField(spot, 'title');
+            }
             
             const modal = document.getElementById('photo-modal');
-            modal._currentSpot = spot;
+            if (modal) modal._currentSpot = spot;
             updateModalText(spot);
 
+            // ▼ SNSリンクの処理（スプレッドシートの sns 列を優先）
             const snsLink = spot.sns || spot.snsurl || spot.url || spot.link;
             const snsEl = document.getElementById('modal-sns');
-            if (snsLink && snsLink.startsWith('http')) {
-                snsEl.style.display = 'block'; snsEl.href = snsLink; snsEl.textContent = 'INSTAGRAM LINK';
-                snsEl.style.color = '#1a1a1a'; snsEl.style.borderColor = '#1a1a1a'; snsEl.style.pointerEvents = 'auto';
-            } else {
-                snsEl.style.display = 'block'; snsEl.removeAttribute('href'); snsEl.textContent = 'NO SNS ACCOUNT';
-                snsEl.style.color = '#ccc'; snsEl.style.borderColor = 'transparent'; snsEl.style.pointerEvents = 'none';
+            if (snsEl) {
+                if (snsLink && snsLink.startsWith('http')) {
+                    snsEl.style.display = 'block'; 
+                    snsEl.href = snsLink; 
+                    snsEl.textContent = 'INSTAGRAM LINK';
+                    snsEl.style.color = '#1a1a1a'; 
+                    snsEl.style.borderColor = '#1a1a1a'; 
+                    snsEl.style.pointerEvents = 'auto';
+                } else {
+                    snsEl.style.display = 'block'; 
+                    snsEl.removeAttribute('href'); 
+                    snsEl.textContent = 'NO SNS ACCOUNT';
+                    snsEl.style.color = '#ccc'; 
+                    snsEl.style.borderColor = 'transparent'; 
+                    snsEl.style.pointerEvents = 'none';
+                }
             }
 
             const mapBtn = document.getElementById('modal-map-btn');
@@ -1270,26 +1298,113 @@
             const shareUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?spot=' + encodeURIComponent(spot.title) + '&lang=' + currentLang;
             const shareText = `${currentLang === 'en' ? `Found a hidden gem in Mihara! "${getLocalizedSpotField(spot, 'title')}"` : `三原のいいとこ見つけた！「${getLocalizedSpotField(spot, 'title')}」`}\n#三原市まち歩き #Mihara`;
 
-            document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-            document.getElementById('share-fb').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-            document.getElementById('share-line').href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}`;
+            const shareX = document.getElementById('share-x');
+            if(shareX) shareX.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
             
+            const shareFb = document.getElementById('share-fb');
+            if(shareFb) shareFb.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+            
+            const shareLine = document.getElementById('share-line');
+            if(shareLine) shareLine.href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}`;
+            
+            // クリップボードコピー処理の安全化（プレビュー環境でのエラー防止）
             const copyBtn = document.getElementById('share-copy');
             const copyMsg = document.getElementById('copy-success-msg');
-            copyMsg.classList.remove('show');
-            copyBtn.onclick = () => { navigator.clipboard.writeText(shareUrl).then(() => { copyMsg.classList.add('show'); setTimeout(() => copyMsg.classList.remove('show'), 2000); }); };
+            if (copyMsg) copyMsg.classList.remove('show');
+            if (copyBtn) {
+                copyBtn.onclick = () => {
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(shareUrl).then(() => {
+                                if (copyMsg) {
+                                    copyMsg.classList.add('show'); 
+                                    setTimeout(() => copyMsg.classList.remove('show'), 2000);
+                                }
+                            }).catch(err => {
+                                console.warn('Clipboard write error', err);
+                                fallbackCopyText(shareUrl, copyMsg);
+                            });
+                        } else {
+                            fallbackCopyText(shareUrl, copyMsg);
+                        }
+                    } catch(e) { console.warn(e); }
+                };
+            }
 
-            modal.classList.add('active');
+            if (modal) modal.classList.add('active');
             document.body.style.overflow = 'hidden';
             updateUrlParams(spot.title);
         }
 
+        // コピー機能のフォールバック
+        function fallbackCopyText(text, copyMsg) {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (copyMsg) {
+                    copyMsg.classList.add('show');
+                    setTimeout(() => copyMsg.classList.remove('show'), 2000);
+                }
+            } catch (err) {
+                console.warn('Fallback copy failed', err);
+            }
+        }
+
         function closeModal() {
-            document.getElementById('photo-modal').classList.remove('active');
+            const modal = document.getElementById('photo-modal');
+            if (modal) modal.classList.remove('active');
             document.body.style.overflow = 'auto';
-            document.getElementById('copy-success-msg').classList.remove('show');
+            const copyMsg = document.getElementById('copy-success-msg');
+            if (copyMsg) copyMsg.classList.remove('show');
             clearUrlParams();
         }
+
+        // --- PC用：マウストラッグでの横スクロール制御 (安全な初期化に変更) ---
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let isDragged = false;
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const scrollContainer = document.getElementById('local-scroll-container');
+            if (scrollContainer) {
+                scrollContainer.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    isDragged = false;
+                    scrollContainer.classList.add('active');
+                    scrollContainer.style.scrollSnapType = 'none'; 
+                    startX = e.pageX - scrollContainer.offsetLeft;
+                    scrollLeft = scrollContainer.scrollLeft;
+                });
+
+                scrollContainer.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    scrollContainer.classList.remove('active');
+                    scrollContainer.style.scrollSnapType = 'x mandatory';
+                });
+
+                scrollContainer.addEventListener('mouseup', () => {
+                    isDown = false;
+                    scrollContainer.classList.remove('active');
+                    scrollContainer.style.scrollSnapType = 'x mandatory';
+                });
+
+                scrollContainer.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - scrollContainer.offsetLeft;
+                    const walk = (x - startX) * 1.5; 
+                    if (Math.abs(walk) > 5) isDragged = true; 
+                    scrollContainer.scrollLeft = scrollLeft - walk;
+                });
+            }
+        });
 
         // --- 起動時のデータ読み込み ---
         window.addEventListener('load', () => {
@@ -1305,80 +1420,86 @@
             const modal = document.getElementById('photo-modal');
             const modalContent = document.getElementById('modal-content-area');
             const closeBtn = document.getElementById('modal-close-btn');
-            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-            closeBtn.addEventListener('click', closeModal);
-            modalContent.addEventListener('click', (e) => e.stopPropagation());
+            if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+            if (modalContent) modalContent.addEventListener('click', (e) => e.stopPropagation());
 
             // 1. ギャラリー用CSVの読み込み
-            Papa.parse(CSV_URL, {
-                download: true, header: true, skipEmptyLines: true,
-                complete: function(results) {
-                    spotsData = results.data.map(row => {
-                        const clean = {};
-                        Object.keys(row).forEach(k => {
-                            let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
-                            clean[cleanKey] = (typeof row[k] === 'string') ? row[k].trim() : row[k];
-                        });
-
-                        // lat_lng_rawの自動分割処理
-                        if (clean.lat_lng_raw) {
-                            const parts = clean.lat_lng_raw.split(',');
-                            if (parts.length >= 2) {
-                                clean.lat = parts[0].trim();
-                                clean.lng = parts[1].trim();
-                            }
-                        }
-
-                        if (!clean.map_url) clean.map_url = clean['googleマップのurl'] || clean['googleマップのurl(共有リンク)'] || clean['googleマップのurl（共有リンク）'] || clean['地図url'] || clean['googlemap'] || '';
-                        return clean;
-                    }).filter(s => s.title);
-                    
-                    render('all');
-                    checkAndOpenModalFromUrl();
-                },
-                error: function(err) {
-                    console.error("Gallery CSV Error:", err);
-                    document.getElementById('gallery-grid').innerHTML = '<div class="col-span-3 py-10 text-center text-xs text-red-400">データの読み込みに失敗しました。</div>';
-                }
-            });
-
-            // 2. 新しい「親子でお散歩」用CSVの読み込み
-            if (LOCAL_CSV_URL.startsWith("http")) {
-                Papa.parse(LOCAL_CSV_URL, {
+            if (typeof Papa !== 'undefined') {
+                Papa.parse(CSV_URL, {
                     download: true, header: true, skipEmptyLines: true,
                     complete: function(results) {
-                        localInsightsData = results.data.map(row => {
-                            const clean = {};
-                            Object.keys(row).forEach(k => {
-                                let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
-                                clean[cleanKey] = (typeof row[k] === 'string') ? row[k].trim() : row[k];
-                            });
+                        try {
+                            spotsData = results.data.map(row => {
+                                const clean = {};
+                                Object.keys(row).forEach(k => {
+                                    let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
+                                    clean[cleanKey] = (typeof row[k] === 'string') ? row[k].trim() : row[k];
+                                });
 
-                            // lat_lng_rawの自動分割処理
-                            if (clean.lat_lng_raw) {
-                                const parts = clean.lat_lng_raw.split(',');
-                                if (parts.length >= 2) {
-                                    clean.lat = parts[0].trim();
-                                    clean.lng = parts[1].trim();
+                                // lat_lng_rawの自動分割処理 (Stringに変換してエラー防止)
+                                if (clean.lat_lng_raw) {
+                                    const parts = String(clean.lat_lng_raw).split(',');
+                                    if (parts.length >= 2) {
+                                        clean.lat = parts[0].trim();
+                                        clean.lng = parts[1].trim();
+                                    }
                                 }
-                            }
 
-                            return clean;
-                        }).filter(s => s.title); // titleが存在するものだけ
-                        
-                        renderLocalInsights();
-                        checkAndOpenModalFromUrl();
+                                if (!clean.map_url) clean.map_url = clean['googleマップのurl'] || clean['googleマップのurl(共有リンク)'] || clean['googleマップのurl（共有リンク）'] || clean['地図url'] || clean['googlemap'] || '';
+                                return clean;
+                            }).filter(s => s.title);
+                            
+                            render('all');
+                            checkAndOpenModalFromUrl();
+                        } catch(e) { console.warn('Data parse warning:', e); }
                     },
                     error: function(err) {
-                        console.error("Local CSV Error (URL not set or invalid):", err);
-                        localInsightsData = [];
-                        renderLocalInsights(); // 空の状態を描画
+                        console.error("Gallery CSV Error:", err);
+                        const grid = document.getElementById('gallery-grid');
+                        if (grid) grid.innerHTML = '<div class="col-span-3 py-10 text-center text-xs text-red-400">データの読み込みに失敗しました。</div>';
                     }
                 });
-            } else {
-                // まだURLが設定されていない場合
-                localInsightsData = [];
-                renderLocalInsights();
+
+                // 2. 新しい「親子でお散歩」用CSVの読み込み
+                if (LOCAL_CSV_URL && LOCAL_CSV_URL.startsWith("http")) {
+                    Papa.parse(LOCAL_CSV_URL, {
+                        download: true, header: true, skipEmptyLines: true,
+                        complete: function(results) {
+                            try {
+                                localInsightsData = results.data.map(row => {
+                                    const clean = {};
+                                    Object.keys(row).forEach(k => {
+                                        let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
+                                        clean[cleanKey] = (typeof row[k] === 'string') ? row[k].trim() : row[k];
+                                    });
+
+                                    // lat_lng_rawの自動分割処理
+                                    if (clean.lat_lng_raw) {
+                                        const parts = String(clean.lat_lng_raw).split(',');
+                                        if (parts.length >= 2) {
+                                            clean.lat = parts[0].trim();
+                                            clean.lng = parts[1].trim();
+                                        }
+                                    }
+
+                                    return clean;
+                                }).filter(s => s.title); // titleが存在するものだけ
+                                
+                                renderLocalInsights();
+                                checkAndOpenModalFromUrl();
+                            } catch (e) { console.warn('Local Data parse warning:', e); }
+                        },
+                        error: function(err) {
+                            console.error("Local CSV Error (URL not set or invalid):", err);
+                            localInsightsData = [];
+                            renderLocalInsights(); // 空の状態を描画
+                        }
+                    });
+                } else {
+                    localInsightsData = [];
+                    renderLocalInsights();
+                }
             }
 
             document.querySelectorAll('.tab-item').forEach(tab => {
