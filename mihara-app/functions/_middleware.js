@@ -2,7 +2,11 @@
  * Cloudflare Pages Functions - _middleware.js
  */
 
+// 1. ギャラリー用CSV
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jkQnLXsIL33pmO60BCd0hIr_v5xh34cJ_IWAHkF0pTaj855pzicmNoVx6W8CPK3MEhlp-irodPSE/pub?gid=1232979489&single=true&output=csv";
+
+// 2. 親子でお散歩用 新しいCSV（フォーム回答用シート）
+const LOCAL_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTia8V00j15toSprtd2bQV4JWrZprRz7m_cf73IZla6KOu62wtunUjCrb9wKkyNthWep8TfDeT8HW2B/pub?gid=1467172273&single=true&output=csv";
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
@@ -23,82 +27,96 @@ export async function onRequest(context) {
   let spotData = null;
   
   try {
-    const csvRes = await fetch(CSV_URL);
-    if (!csvRes.ok) throw new Error(`CSV Fetch Failed: ${csvRes.status}`);
+    // まずはギャラリー用のCSVから探す
+    let csvText1 = "";
+    try {
+      const csvRes1 = await fetch(CSV_URL);
+      if (csvRes1.ok) csvText1 = await csvRes1.text();
+    } catch(e) {}
     
-    const csvText = await csvRes.text();
-    spotData = findSpotInCsv(csvText, spotTitle);
+    spotData = findSpotInCsv(csvText1, spotTitle);
+
+    // 見つからなければ、新しい「親子さんぽ用」のCSVから探す
+    if (!spotData && LOCAL_CSV_URL.startsWith("http")) {
+      try {
+        const csvRes2 = await fetch(LOCAL_CSV_URL);
+        if (csvRes2.ok) {
+           const csvText2 = await csvRes2.text();
+           spotData = findSpotInCsv(csvText2, spotTitle);
+        }
+      } catch(e) {}
+    }
+
   } catch (e) {
     console.error('Functions Error:', e);
   }
 
-  // データが取得できなかった場合は元のHTMLをそのまま返す
-  if (!spotData) {
-    return response;
+  // もし該当データが見つかれば、HTMLのMetaタグ（OGP）を書き換える
+  if (spotData && spotData.title) {
+    let html = await response.text();
+    
+    // 言語判定でタイトル/説明文を切り替え
+    const isEn = (lang === 'en');
+    const displayTitle = (isEn && spotData.title_en) ? spotData.title_en : spotData.title;
+    const displayDesc = (isEn && spotData.desc_en) ? spotData.desc_en : (spotData.desc || 'まだ知らない三原の景色を、みんなで描くフォトマップ。');
+
+    // Googleドライブの画像URLをプレビュー用に変換
+    let imageUrl = spotData.image || "https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg";
+    if (imageUrl.includes('drive.google.com')) {
+      const idMatch = imageUrl.match(/[-\w]{25,}/);
+      if (idMatch) {
+        imageUrl = `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=w1000`;
+      }
+    }
+
+    const newTitle = `${displayTitle} | MIHARA REDISCOVER`;
+    const cleanDesc = displayDesc.replace(/\n/g, '').substring(0, 100);
+
+    // Metaタグの置換
+    html = html.replace(/<title>.*?<\/title>/, `<title>${newTitle}</title>`);
+    html = html.replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${cleanDesc}">`);
+    
+    html = html.replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${newTitle}">`);
+    html = html.replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${cleanDesc}">`);
+    html = html.replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${imageUrl}">`);
+    
+    html = html.replace(/<meta name="twitter:title" content="[^"]*">/, `<meta name="twitter:title" content="${newTitle}">`);
+    html = html.replace(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${cleanDesc}">`);
+    html = html.replace(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${imageUrl}">`);
+
+    return new Response(html, {
+      headers: response.headers,
+    });
   }
 
-  // 取得した確実なデータを使ってOGP（SNS用のタグ）を書き換える
-  const ogTitle = lang === 'en' ? (spotData.title_en || spotData.title) : spotData.title;
-  let ogDesc = lang === 'en' ? (spotData.desc_en || spotData.desc || `${ogTitle} scenery.`) : (spotData.desc || `${ogTitle}の風景です。`);
-  
-  // 改行を消した後、80文字を超える場合は「...」を付ける
-  ogDesc = ogDesc.replace(/\r?\n/g, '');
-  if (ogDesc.length > 80) {
-      ogDesc = ogDesc.substring(0, 80) + '...';
-  }
-
-  const siteTitle = lang === 'en' ? `${ogTitle} | Mihara Walk PHOTO MAP` : `${ogTitle} | 三原市まち歩き PHOTO MAP`;
-  
-  let imageUrl = formatDriveUrl(spotData.image);
-  if (!imageUrl) {
-      imageUrl = "https://i.postimg.cc/Dy2sThhC/IMG-9586.jpg";
-  }
-
-  return new HTMLRewriter()
-    .on('title', { element(e) { e.setInnerContent(siteTitle); } })
-    .on('meta[name="description"]', { element(e) { e.setAttribute('content', ogDesc); } })
-    .on('meta[property="og:title"]', { element(e) { e.setAttribute('content', siteTitle); } })
-    .on('meta[property="og:description"]', { element(e) { e.setAttribute('content', ogDesc); } })
-    .on('meta[property="og:image"]', { element(e) { e.setAttribute('content', imageUrl); } })
-    .on('meta[name="twitter:title"]', { element(e) { e.setAttribute('content', siteTitle); } })
-    .on('meta[name="twitter:description"]', { element(e) { e.setAttribute('content', ogDesc); } })
-    .on('meta[name="twitter:image"]', { element(e) { e.setAttribute('content', imageUrl); } })
-    .on('head', { element(e) { e.append(`<meta name="cf-functions-debug" content="success_v15">`, { html: true }); } })
-    .transform(response);
+  return response;
 }
 
-// --- 補助関数：列の番号をピンポイントで特定してデータを抽出する ---
+// --- 補助関数：CSVテキストからタイトルが一致する行を探してオブジェクトにする ---
 function findSpotInCsv(csvText, targetTitle) {
+  if (!csvText) return null;
+  
   const rows = parseCSV(csvText);
   if (rows.length < 2) return null;
 
-  // 余計な空白を取り除き、小文字化して比較しやすくする
-  const headers = rows[0].map(h => h.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase());
+  const header = rows[0].map(h => h.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase());
   
-  // 完全一致（===）で列を探すことで、"rpg_title"などの誤検知を100%防ぐ
-  const titleIndex = headers.findIndex(h => h === 'title' || h === 'タイトル' || h === 'スポット名');
-  const descIndex = headers.findIndex(h => h === 'desc' || h === '紹介' || h === '紹介文');
-  const imageIndex = headers.findIndex(h => h === 'image' || h === '画像' || h === '写真' || h === 'img');
-  
-  const titleEnIndex = headers.findIndex(h => h === 'title_en' || h === '英語タイトル');
-  const descEnIndex = headers.findIndex(h => h === 'desc_en' || h === '英語紹介');
+  const titleIndex = header.indexOf('title');
+  const titleEnIndex = header.indexOf('title_en');
+  const descIndex = header.indexOf('desc');
+  const descEnIndex = header.indexOf('desc_en');
+  const imageIndex = header.indexOf('image');
 
-  // タイトル列が見つからなければ終了
   if (titleIndex === -1) return null;
-
-  const cleanTargetTitle = targetTitle.replace(/[\s\u3000]+/g, '');
 
   for (let i = 1; i < rows.length; i++) {
     const values = rows[i];
-    if (!values || values.length === 0 || !values[0]) continue;
-
-    const rowTitle = values[titleIndex] ? values[titleIndex].trim() : '';
-    const cleanRowTitle = rowTitle.replace(/[\s\u3000]+/g, '');
+    // 行のデータがヘッダーのインデックスより短い場合はスキップしてエラーを防ぐ
+    if (!values || values.length <= titleIndex) continue;
     
-    // タイトルが一致したら、特定した「列の番号」から直接データを引っこ抜く
-    if (cleanRowTitle === cleanTargetTitle) {
+    if (values[titleIndex] && values[titleIndex].trim() === targetTitle) {
       return {
-        title: values[titleIndex] ? values[titleIndex].trim() : '',
+        title: values[titleIndex].trim(),
         desc: (descIndex !== -1 && values[descIndex]) ? values[descIndex].trim() : '',
         image: (imageIndex !== -1 && values[imageIndex]) ? values[imageIndex].trim() : '',
         title_en: (titleEnIndex !== -1 && values[titleEnIndex]) ? values[titleEnIndex].trim() : '',
@@ -128,17 +146,8 @@ function parseCSV(csvText) {
       row.push(current); result.push(row); row = []; current = '';
     } else { current += char; }
   }
-  if (current !== '' || row.length > 0) { row.push(current); result.push(row); }
+  if (current !== '' || row.length > 0) {
+    row.push(current); result.push(row);
+  }
   return result;
-}
-
-// --- X（Twitter）の画像ブロック回避用URLジェネレーター ---
-function formatDriveUrl(url) {
-    if (!url) return '';
-    const idMatch = url.match(/[-\w]{25,}/);
-    // X(Twitter)が絶対に読み込めるGoogleフォト経由の特殊URLに変換
-    if (idMatch && (url.includes('drive.google.com') || url.includes('google'))) {
-        return `https://lh3.googleusercontent.com/d/${idMatch[0]}=w1200`;
-    }
-    return url;
 }

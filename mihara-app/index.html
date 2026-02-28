@@ -6,6 +6,7 @@
       - Functions連携: サーバー側でのOGP書き換えに対応
       - 多言語化(i18n): EN/JPスイッチおよびRPG×英語の4パターン対応
       - 新機能: 天気API (Open-Meteo) を用いたマジックアワー＆週間天気の自動表示
+      - 追加機能: 「親子でお散歩」特化型の横スライド・ローカルインサイト（専用CSV読み込み＆PCドラッグ対応＆マップ連動）
     -->
 
     <!-- Google tag (gtag.js) -->
@@ -135,14 +136,14 @@
 
         @media (min-width: 640px) {
             .header-logo { font-size: 1rem; letter-spacing: 0.1em; }
-            .nav-links-wrap { gap: 20px; }
-            .nav-simple-link { font-size: 12px; }
+            .nav-links-wrap { gap: 15px; }
+            .nav-simple-link { font-size: 11px; }
         }
         @media (max-width: 640px) {
             .nav-simple-link { font-size: 9px; }
             .nav-links-wrap { gap: 6px; } 
             #rpg-toggle-btn, #lang-toggle-btn { padding: 4px 8px; font-size: 9px; }
-            @media (max-width: 370px) { .header-logo { display: none; } .fixed-nav { justify-content: center; } }
+            @media (max-width: 380px) { .header-logo { display: none; } .fixed-nav { justify-content: center; } }
         }
 
         /* --- ヒーロー --- */
@@ -160,7 +161,7 @@
 
         /* --- セクション全般 --- */
         .section-wrap { padding: 100px 24px; scroll-margin-top: 60px; position: relative; transition: background-color 0.5s ease; }
-        .inner-limit { max-width: 750px; margin: 0 auto; text-align: center; }
+        .inner-limit { max-width: 800px; margin: 0 auto; text-align: center; }
         .section-tag-label { font-size: 0.8rem; font-weight: 700 !important; color: var(--palette-blue); letter-spacing: 0.25em; margin-bottom: 40px; display: block; text-transform: uppercase; }
         .card-frame { background: white; border-radius: 12px; padding: 40px 25px; margin-bottom: 30px; text-align: left; border: 1px solid var(--border-soft); box-shadow: 0 10px 30px rgba(0,64,152,0.03); transition: all 0.5s ease; }
         .card-frame h4 { font-weight: 700 !important; color: var(--palette-blue); margin-bottom: 12px; font-size: 1rem; border-left: 5px solid var(--palette-blue); padding-left: 15px; }
@@ -210,6 +211,95 @@
         .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background-color: rgba(0, 64, 152, 0.2) !important; }
         .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background-color: var(--palette-blue) !important; color: #fff !important; font-family: 'Zen Maru Gothic', sans-serif !important; font-weight: 900 !important; box-shadow: 0 4px 10px rgba(0, 64, 152, 0.3); }
 
+        /* --- 新設：ローカルインサイト（横スクロール ＆ PCドラッグ対応） --- */
+        .horizontal-scroll-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 16px;
+            padding: 10px 0 30px 0;
+            margin-left: -24px;
+            margin-right: -24px;
+            padding-left: 24px;
+            padding-right: 24px;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+            cursor: grab; /* PC向け: ドラッグできることをアピール */
+        }
+        .horizontal-scroll-container::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+        .horizontal-scroll-container.active {
+            cursor: grabbing;
+        }
+        
+        .local-card-horizontal {
+            flex: 0 0 85%;
+            scroll-snap-align: center;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.03);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            user-select: none; /* ドラッグ中のテキスト選択防止 */
+        }
+        .local-card-horizontal:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,64,152,0.08); }
+        .horizontal-scroll-container.active .local-card-horizontal {
+            transition: none; /* ドラッグ中はホバーアニメーションを止めて軽くする */
+            transform: none;
+        }
+        .local-card-horizontal.active-card {
+            border-color: var(--palette-blue);
+            box-shadow: 0 12px 30px rgba(0,64,152,0.15);
+        }
+        body.rpg-mode .local-card-horizontal.active-card {
+            border-color: #ff0 !important;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.4);
+        }
+        
+        @media (min-width: 640px) {
+            .local-card-horizontal { flex: 0 0 45%; scroll-snap-align: start; }
+            .horizontal-scroll-container { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+        }
+        @media (min-width: 1024px) {
+            .local-card-horizontal { flex: 0 0 31%; scroll-snap-align: start; }
+        }
+
+        .local-card-img-wrap { position: relative; width: 100%; aspect-ratio: 4/3; background: #f1f5f9; overflow: hidden; pointer-events: none; }
+        .local-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; pointer-events: none; }
+        .local-card-horizontal:hover .local-card-img-wrap img { transform: scale(1.05); }
+        
+        .local-tag-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,64,152,0.9); color: white; font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 4px; z-index: 2; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .local-card-content { flex: 1; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; pointer-events: none; }
+        .local-card-title { font-size: 1.1rem; font-weight: 700; color: var(--palette-blue); margin-bottom: 8px; font-family: 'Noto Serif JP', serif !important; }
+        .local-card-desc { font-size: 0.85rem; font-weight: 500; color: var(--text-sub); line-height: 1.8; margin-bottom: 15px; }
+        
+        .local-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; border-top: 1px dashed var(--border-soft); padding-top: 15px; }
+        .local-area { font-size: 10px; font-weight: 700; color: #9ca3af; letter-spacing: 0.1em; text-transform: uppercase; }
+        .local-btn { font-size: 10px; font-weight: 700; color: var(--palette-blue); display: flex; align-items: center; gap: 4px; }
+        
+        /* --- ローカルインサイト用 マップとカードの連動スタイル --- */
+        #local-map-container {
+            height: 40vh;
+            min-height: 350px;
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border-soft);
+            margin-top: 10px;
+            z-index: 1;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.03);
+            display: none; /* 初期は非表示 */
+        }
+        body.rpg-mode #local-map-container {
+            border: 3px double #fff !important;
+            box-shadow: 0 0 0 2px #000;
+        }
+
         /* --- 募集セクション --- */
         .h2-one-line { font-size: 1.6rem; font-weight: 700 !important; margin-bottom: 50px; line-height: 1.2; text-align: center; white-space: nowrap; letter-spacing: -0.07em; color: var(--palette-blue); }
         .insta-cta-box { margin-top: 60px; padding: 40px 20px; background: #fff; border: 2px dashed var(--palette-blue-light); border-radius: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -248,7 +338,7 @@
         body.rpg-mode *:not(i) { font-family: 'DotGothic16', sans-serif !important; letter-spacing: 0.1em; }
         body.rpg-mode img { filter: none; image-rendering: auto; }
         body.rpg-mode .leaflet-layer { filter: contrast(120%) saturate(200%); image-rendering: pixelated; image-rendering: crisp-edges; }
-        body.rpg-mode .card-frame, body.rpg-mode .fixed-nav, body.rpg-mode .sticky-tab-bar, body.rpg-mode .popup-info, body.rpg-mode .insta-cta-box, body.rpg-mode .footer-main, body.rpg-mode .section-wrap:nth-child(even) { background: #00008b !important; border: 3px double #fff !important; border-radius: 4px !important; color: #fff !important; box-shadow: 0 0 0 2px #000; }
+        body.rpg-mode .card-frame, body.rpg-mode .fixed-nav, body.rpg-mode .sticky-tab-bar, body.rpg-mode .popup-info, body.rpg-mode .insta-cta-box, body.rpg-mode .footer-main, body.rpg-mode .section-wrap:nth-child(even), body.rpg-mode .local-card-horizontal { background: #00008b !important; border: 3px double #fff !important; border-radius: 4px !important; color: #fff !important; box-shadow: 0 0 0 2px #000; }
         body.rpg-mode #modal-content-area { background: #00008b !important; border: 3px double #fff !important; box-shadow: 0 0 0 2px #000; color: #fff !important; }
         body.rpg-mode .modal-wrap { background: rgba(0,0,0,0.85) !important; }
         body.rpg-mode .modal-close { background: #000 !important; border: 2px solid #fff !important; color: #fff !important; }
@@ -260,6 +350,8 @@
         body.rpg-mode .view-switch, body.rpg-mode .view-btn, body.rpg-mode .tab-item, body.rpg-mode .share-btn { background: #000 !important; border: 2px solid #fff !important; color: #fff !important; margin: 2px; border-radius: 4px; }
         body.rpg-mode .view-btn.active, body.rpg-mode .tab-item.active { background: #a52a2a !important; color: #ff0 !important; border-color: #ff0 !important; }
         body.rpg-mode #rpg-toggle-btn, body.rpg-mode #lang-toggle-btn { background: #000 !important; border: 2px solid #fff !important; color: #fff !important; border-radius: 4px; }
+        body.rpg-mode .local-tag-badge { background: #000 !important; color: #ff0 !important; border: 1px solid #fff; box-shadow: none; }
+        body.rpg-mode .local-card-footer { border-top-color: #fff !important; }
 
         body.rpg-mode #weather-widget { background: #00008b !important; border: 3px double #fff !important; margin-bottom: 30px; }
         body.rpg-mode #weather-widget * { border-color: #fff !important; }
@@ -282,8 +374,9 @@
         <div class="header-logo" id="header-logo" data-i18n="header-logo">MIHARA REDISCOVER</div>
         <div class="nav-links-wrap">
             <div class="nav-simple-link" onclick="scrollToId('gallery')" data-i18n="nav-map">マップ</div>
+            <div class="nav-simple-link" onclick="scrollToId('local-insights')" data-i18n="nav-local">親子さんぽ</div>
             <div class="nav-simple-link" onclick="scrollToId('contact')" data-i18n="nav-submit">掲載募集</div>
-            <div class="nav-simple-link" onclick="scrollToId('guideline')" data-i18n="nav-guide">掲載案内</div>
+            <div class="nav-simple-link hidden sm:block" onclick="scrollToId('guideline')" data-i18n="nav-guide">掲載案内</div>
             
             <button id="rpg-toggle-btn" class="header-btn" onclick="toggleRPGMode()">
                 <i id="rpg-btn-icon" class="fa-solid fa-dungeon"></i> <span id="rpg-btn-text">冒険の扉</span>
@@ -401,6 +494,23 @@
             </div>
         </div>
         <div id="map-container"></div>
+    </section>
+
+    <!-- 新設：LOCAL INSIGHTS（親子でお散歩 特化・横スクロール・別CSV読み込み版・連動マップ） -->
+    <section id="local-insights" class="section-wrap bg-slate-50 border-t border-slate-200">
+        <div class="inner-limit max-w-5xl">
+            <span class="section-tag-label" id="label-local" data-i18n="label-local">LOCAL INSIGHTS</span>
+            <h2 class="serif-custom text-blue-900 text-2xl md:text-3xl mb-4" id="title-local" data-i18n="title-local">親子でお散歩・三原の歩き方</h2>
+            <p class="text-sm font-bold text-gray-500 mb-6" id="desc-local" data-i18n="desc-local">公式ガイドには載らない、パパママ目線のリアルな遊び場マップ。</p>
+            
+            <div id="local-scroll-container" class="horizontal-scroll-container text-left mb-2">
+                <!-- データを読み込み中です... -->
+                <div class="w-full text-center py-10 text-[10px] font-bold text-slate-300 uppercase tracking-widest" data-i18n="loading-text">Collecting memories...</div>
+            </div>
+
+            <!-- 連動用マップ -->
+            <div id="local-map-container"></div>
+        </div>
     </section>
 
     <!-- 3. 掲載募集 -->
@@ -529,8 +639,9 @@
         const i18nData = {
             'header-logo': { normal: { jp: 'MIHARA REDISCOVER', en: 'MIHARA REDISCOVER' }, rpg: { jp: 'MIHARA QUEST', en: 'MIHARA QUEST' } },
             'nav-map': { normal: { jp: 'マップ', en: 'MAP' }, rpg: { jp: 'ちず', en: 'MAP' } },
+            'nav-local': { normal: { jp: '親子さんぽ', en: 'KIDS WALKS' }, rpg: { jp: 'うわさばなし', en: 'RUMORS' } },
             'nav-submit': { normal: { jp: '掲載募集', en: 'SUBMIT' }, rpg: { jp: 'ギルドへ', en: 'GUILD' } },
-            'nav-guide': { normal: { jp: '掲載案内', en: 'GUIDELINES' }, rpg: { jp: 'おきて', en: 'RULES' } },
+            'nav-guide': { normal: { jp: '掲載案内', en: 'GUIDES' }, rpg: { jp: 'おきて', en: 'RULES' } },
             'hero-label': { normal: { jp: 'MIHARA REDISCOVER PROJECT', en: 'MIHARA REDISCOVER PROJECT' }, rpg: { jp: 'MIHARA QUEST PROJECT', en: 'MIHARA QUEST PROJECT' } },
             'hero-title': { normal: { jp: 'まだ知らない三原の景色を、<br class="mobile-br">みんなで描くフォトマップ', en: 'Discovering the unseen Mihara,<br class="mobile-br">a community photo map.' }, rpg: { jp: '勇者よ、まだ見ぬ三原の<br>地図を完成させるのだ', en: 'O HERO!<br>THOU MUST COMPLETE THE UNSEEN MAP OF MIHARA.' } },
             'label-about': { normal: { jp: 'About Project', en: 'About Project' }, rpg: { jp: 'QUEST INFO', en: 'QUEST INFO' } },
@@ -542,6 +653,13 @@
             'btn-view-map-text': { normal: { jp: 'MAP', en: 'MAP' }, rpg: { jp: 'ちず', en: 'MAP' } },
             'loading-text': { normal: { jp: 'Collecting memories...', en: 'Collecting memories...' }, rpg: { jp: 'ローディングちゅう...', en: 'Loading...' } },
             'load-more-btn': { normal: { jp: 'MORE PHOTOS', en: 'MORE PHOTOS' }, rpg: { jp: 'もっと さがす', en: 'EXPLORE MORE' } },
+            
+            // 新設セクション用の辞書
+            'label-local': { normal: { jp: 'LOCAL INSIGHTS', en: 'LOCAL INSIGHTS' }, rpg: { jp: 'SECRET LORE', en: 'SECRET LORE' } },
+            'title-local': { normal: { jp: '親子でお散歩・三原の歩き方', en: 'Walking Mihara with Kids' }, rpg: { jp: '酒場のうわさばなし', en: 'TAVERN RUMORS' } },
+            'desc-local': { normal: { jp: '公式ガイドには載らない、パパママ目線のリアルな遊び場マップ。', en: 'Real playground maps from a parent\'s perspective, not found in official guides.' }, rpg: { jp: 'おうこくの ちずには のっていない、ひみつの じょうほう だ。', en: 'Secret lore hidden from the Kingdom\'s official maps.' } },
+            'local-empty': { normal: { jp: '現在、お散歩コースを準備中です...', en: 'Walking routes are currently being prepared...' }, rpg: { jp: 'ただいま じょうほうを あつめている...', en: 'Gathering intel...' } },
+
             'label-contact': { normal: { jp: 'Photo Submission', en: 'Photo Submission' }, rpg: { jp: 'Guild Request', en: 'GUILD REQUEST' } },
             'title-contact': { normal: { jp: '三原の魅力を教えてください', en: 'Share the Charm of Mihara' }, rpg: { jp: '情報をギルドに送る', en: 'REPORT TO GUILD' } },
             'desc-contact': { normal: { jp: '隠れた名所、美味しいグルメ、四季折々の風景、まちのイベント、あるいは何気ない日常のひとコマなど、三原の魅力が伝わる写真を幅広く募集しています。', en: 'We are looking for a wide range of photos that convey the charm of Mihara, such as hidden spots, delicious food, seasonal scenery, local events, or just casual everyday moments.' }, rpg: { jp: 'ミハラには まだみぬ 「うるわしき ケシキ」や<br>「ウマいもの」が かくされている。<br><br>たびびとよ、そなたのみつけた<br>「ミハラのキオク」を ギルドにおしえてくれ！', en: 'Undiscovered VISTAS and DELICACIES are hidden in MIHARA.<br><br>Brave traveler, share thy MEMORIES with the GUILD!' } },
@@ -683,7 +801,10 @@
 
             updateWeatherUI();
 
-            if(spotsData.length > 0) render(currentActiveArea);
+            if(spotsData.length > 0) {
+                render(currentActiveArea);
+            }
+            renderLocalInsights(); 
             
             const modal = document.getElementById('photo-modal');
             if (modal.classList.contains('active') && modal._currentSpot) {
@@ -738,8 +859,21 @@
             }, 6000);
         }
 
+        // ==========================================
+        // ▼ データの読み込み設定 (CSV URLs)
+        // ==========================================
+        
+        // 1. 既存のギャラリー用データURL
         const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jkQnLXsIL33pmO60BCd0hIr_v5xh34cJ_IWAHkF0pTaj855pzicmNoVx6W8CPK3MEhlp-irodPSE/pub?gid=1232979489&single=true&output=csv";
+        
+        // 2. 新しい「親子でお散歩」コーナー用のデータURL（フォーム回答用シート）
+        const LOCAL_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTia8V00j15toSprtd2bQV4JWrZprRz7m_cf73IZla6KOu62wtunUjCrb9wKkyNthWep8TfDeT8HW2B/pub?gid=1467172273&single=true&output=csv";
+
         let spotsData = [];
+        let localInsightsData = [];
+        let localMapInstance = null;
+        let localMarkersGroup = null;
+        let localMarkersMap = {};
         
         const AREA_POSITIONS = { 'all': { lat: 34.4200, lng: 133.0800, zoom: 11 }, 'mihara': { lat: 34.4000, lng: 133.0800, zoom: 13 }, 'daiwa': { lat: 34.5300, lng: 132.9500, zoom: 12 }, 'kui': { lat: 34.5600, lng: 133.0500, zoom: 12 }, 'hongo': { lat: 34.4200, lng: 132.9200, zoom: 12 }, 'sagi': { lat: 34.3300, lng: 133.1100, zoom: 12 } };
         const ITEMS_PER_PAGE = 12;
@@ -867,11 +1001,205 @@
             else loadMoreArea.classList.add('hidden');
         }
 
+        // --- 親子でお散歩・横スクロール＆マップ連動描画 ---
+        function initLocalMap() {
+            if (localMapInstance) return;
+            const initPos = AREA_POSITIONS['all'];
+            // scrollWheelZoomをfalseにして、ページスクロール時の誤操作を防止
+            localMapInstance = L.map('local-map-container', { scrollWheelZoom: false }).setView([initPos.lat, initPos.lng], initPos.zoom);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OSM', subdomains: 'abcd', maxZoom: 19 }).addTo(localMapInstance);
+            localMarkersGroup = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 50, spiderfyOnMaxZoom: true });
+            localMapInstance.addLayer(localMarkersGroup);
+
+            // マップをクリックしたらズーム可能にする（UX配慮）
+            localMapInstance.once('focus', function() { localMapInstance.scrollWheelZoom.enable(); });
+        }
+
+        function renderLocalInsights() {
+            const container = document.getElementById('local-scroll-container');
+            const mapContainer = document.getElementById('local-map-container');
+            container.innerHTML = '';
+
+            // データがまだ無い場合の「枠だけ」表示
+            if (localInsightsData.length === 0) {
+                container.innerHTML = `
+                    <div class="w-full py-20 text-center bg-white rounded-xl border border-dashed border-gray-300 mx-6 sm:mx-0 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-person-walking text-4xl text-gray-200 mb-4"></i>
+                        <span class="text-[11px] font-bold text-gray-400 uppercase tracking-widest" data-i18n="local-empty">現在、お散歩コースを準備中です...</span>
+                    </div>
+                `;
+                const mode = isRPGMode ? 'rpg' : 'normal';
+                const el = container.querySelector('[data-i18n="local-empty"]');
+                if (el && i18nData['local-empty'][mode][currentLang]) {
+                    el.innerHTML = i18nData['local-empty'][mode][currentLang];
+                }
+                mapContainer.style.display = 'none'; // データがない時はマップ非表示
+                return;
+            }
+
+            mapContainer.style.display = 'block';
+            if (!localMapInstance) initLocalMap();
+            localMarkersGroup.clearLayers();
+            localMarkersMap = {};
+            let hasMarkers = false;
+
+            // スクロール時にカードとマップを連動させるObserver
+            const observerOptions = { root: container, rootMargin: '0px', threshold: 0.8 };
+            const cardObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const title = entry.target.dataset.title;
+                        const marker = localMarkersMap[title];
+                        
+                        // アクティブなカードのスタイル更新
+                        document.querySelectorAll('.local-card-horizontal').forEach(c => c.classList.remove('active-card'));
+                        entry.target.classList.add('active-card');
+
+                        // マップの中心を移動してポップアップを開く
+                        if (marker) {
+                            localMapInstance.setView(marker.getLatLng(), 15, { animate: true, duration: 0.5 });
+                            marker.openPopup();
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            localInsightsData.forEach(spot => {
+                const imgUrl = formatDriveUrl(spot.image, 'w800');
+                const lang = currentLang;
+                const title = (lang === 'en' && spot.title_en) ? spot.title_en : spot.title;
+                const desc = (lang === 'en' && spot.desc_en) ? spot.desc_en : spot.desc;
+                const tag = spot.tag || "🎒 親子でお散歩";
+                const areaLabel = areaLabels[spot.area] ? areaLabels[spot.area][lang] : (lang==='en'?'MIHARA':'三原');
+
+                // カードの生成
+                const card = document.createElement('div');
+                card.className = 'local-card-horizontal';
+                card.dataset.title = spot.title; // 紐付け用
+                
+                card.onclick = (e) => {
+                    if (isDragged) { e.preventDefault(); return; }
+                    const modalSpotData = { ...spot, title: spot.title, desc: spot.desc, title_en: spot.title_en, desc_en: spot.desc_en };
+                    openModal(modalSpotData);
+                }; 
+
+                card.innerHTML = `
+                    <div class="local-card-img-wrap">
+                        <div class="local-tag-badge">${tag}</div>
+                        <img src="${imgUrl}" loading="lazy" alt="${title}" onerror="this.src='https://placehold.co/400x300/e2e8f0/94a3b8?text=No+Image';">
+                    </div>
+                    <div class="local-card-content">
+                        <h4 class="local-card-title">${title}</h4>
+                        <p class="local-card-desc">${desc}</p>
+                        <div class="local-card-footer">
+                            <span class="local-area"><i class="fa-solid fa-location-dot mr-1"></i> ${areaLabel}</span>
+                            <span class="local-btn">${lang === 'en' ? 'View Details' : '詳細を見る'} <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+                cardObserver.observe(card);
+
+                // マップマーカーの生成
+                if (spot.lat && spot.lng) {
+                    const lat = parseFloat(spot.lat); const lng = parseFloat(spot.lng);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        hasMarkers = true;
+                        const popupImgUrl = formatDriveUrl(spot.image, 'w500');
+                        const popupContent = `
+                            <div style="cursor:pointer;" onclick="scrollToLocalCard('${spot.title.replace(/'/g, "\\'")}')">
+                                <div class="popup-img-wrap"><img src="${popupImgUrl}" class="popup-img" onerror="this.src='https://placehold.co/200x130/e2e8f0/94a3b8?text=No+Image';"></div>
+                                <div class="popup-info">
+                                    <span class="popup-area">${areaLabel}</span>
+                                    <div class="popup-title">${title}</div>
+                                    <div class="popup-more">${lang === 'en' ? 'View on Card' : 'カードで見る'} <i class="fa-solid fa-arrow-up text-[8px]"></i></div>
+                                </div>
+                            </div>`;
+                        
+                        const marker = L.marker([lat, lng]).bindPopup(popupContent);
+                        localMarkersGroup.addLayer(marker);
+                        localMarkersMap[spot.title] = marker;
+
+                        // ピンクリック時にカードへスクロール
+                        marker.on('click', () => {
+                            scrollToLocalCard(spot.title);
+                        });
+                    }
+                }
+            });
+
+            // マップのサイズ調整と初期位置
+            if (hasMarkers) {
+                setTimeout(() => {
+                    localMapInstance.invalidateSize();
+                    localMapInstance.fitBounds(localMarkersGroup.getBounds(), { padding: [30, 30], maxZoom: 14 });
+                    // 最初のカードをアクティブにする
+                    const firstCard = container.querySelector('.local-card-horizontal');
+                    if (firstCard) firstCard.classList.add('active-card');
+                }, 300);
+            }
+        }
+
+        // --- マップ連動用：指定したカードまで横スクロールする関数 ---
+        window.scrollToLocalCard = function(title) {
+            const container = document.getElementById('local-scroll-container');
+            const targetCard = container.querySelector(`.local-card-horizontal[data-title="${title}"]`);
+            if (targetCard) {
+                const scrollPos = targetCard.offsetLeft - container.offsetLeft - (container.clientWidth / 2) + (targetCard.clientWidth / 2);
+                container.scrollTo({ left: scrollPos, behavior: 'smooth' });
+                
+                document.querySelectorAll('.local-card-horizontal').forEach(c => c.classList.remove('active-card'));
+                targetCard.classList.add('active-card');
+            }
+        };
+
+        // --- PC用：マウストラッグでの横スクロール制御 ---
+        const scrollContainer = document.getElementById('local-scroll-container');
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let isDragged = false; // クリックかドラッグかを判定
+
+        scrollContainer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            isDragged = false;
+            scrollContainer.classList.add('active');
+            scrollContainer.style.scrollSnapType = 'none'; // ドラッグ中はスナップを無効化して滑らかに
+            startX = e.pageX - scrollContainer.offsetLeft;
+            scrollLeft = scrollContainer.scrollLeft;
+        });
+
+        scrollContainer.addEventListener('mouseleave', () => {
+            isDown = false;
+            scrollContainer.classList.remove('active');
+            scrollContainer.style.scrollSnapType = 'x mandatory';
+        });
+
+        scrollContainer.addEventListener('mouseup', () => {
+            isDown = false;
+            scrollContainer.classList.remove('active');
+            scrollContainer.style.scrollSnapType = 'x mandatory';
+        });
+
+        scrollContainer.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollContainer.offsetLeft;
+            const walk = (x - startX) * 1.5; // スクロールの速さ
+            if (Math.abs(walk) > 5) isDragged = true; // 5px以上動かしたらドラッグと判定
+            scrollContainer.scrollLeft = scrollLeft - walk;
+        });
+
+        // --- URLとモーダルの連動 ---
         function updateUrlParams(spotTitle) {
             if (!history.pushState) return;
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?spot=' + encodeURIComponent(spotTitle) + '&lang=' + currentLang;
             window.history.pushState({path: newUrl}, '', newUrl);
-            const spot = spotsData.find(s => s.title === spotTitle);
+            
+            // localInsightsDataからも検索
+            let spot = spotsData.find(s => s.title === spotTitle);
+            if (!spot) spot = localInsightsData.find(s => s.title === spotTitle);
+
             if(spot) {
                 document.title = `${getLocalizedSpotField(spot, 'title')} | MIHARA REDISCOVER`;
                 const descMeta = document.querySelector('meta[name="description"]');
@@ -894,6 +1222,16 @@
             if(descMeta) descMeta.setAttribute('content', currentLang === 'en' ? "A photo map project to rediscover the charm of Mihara, Hiroshima." : "広島県三原市の魅力を再発見するフォトマッププロジェクト。");
             const linkCanonical = document.getElementById('canonical-tag');
             if (linkCanonical) linkCanonical.setAttribute('href', window.location.protocol + "//" + window.location.host + window.location.pathname);
+        }
+
+        function checkAndOpenModalFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetSpotTitle = urlParams.get('spot');
+            if (targetSpotTitle) {
+                let target = spotsData.find(s => s.title === targetSpotTitle);
+                if (!target) target = localInsightsData.find(s => s.title === targetSpotTitle);
+                if (target) openModal(target);
+            }
         }
 
         function updateModalText(spot) {
@@ -953,6 +1291,7 @@
             clearUrlParams();
         }
 
+        // --- 起動時のデータ読み込み ---
         window.addEventListener('load', () => {
             fetchWeather();
             
@@ -970,6 +1309,7 @@
             closeBtn.addEventListener('click', closeModal);
             modalContent.addEventListener('click', (e) => e.stopPropagation());
 
+            // 1. ギャラリー用CSVの読み込み
             Papa.parse(CSV_URL, {
                 download: true, header: true, skipEmptyLines: true,
                 complete: function(results) {
@@ -979,23 +1319,67 @@
                             let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
                             clean[cleanKey] = (typeof row[k] === 'string') ? row[k].trim() : row[k];
                         });
+
+                        // lat_lng_rawの自動分割処理
+                        if (clean.lat_lng_raw) {
+                            const parts = clean.lat_lng_raw.split(',');
+                            if (parts.length >= 2) {
+                                clean.lat = parts[0].trim();
+                                clean.lng = parts[1].trim();
+                            }
+                        }
+
                         if (!clean.map_url) clean.map_url = clean['googleマップのurl'] || clean['googleマップのurl(共有リンク)'] || clean['googleマップのurl（共有リンク）'] || clean['地図url'] || clean['googlemap'] || '';
                         return clean;
                     }).filter(s => s.title);
                     
                     render('all');
-
-                    const targetSpotTitle = urlParams.get('spot');
-                    if (targetSpotTitle) {
-                        const target = spotsData.find(s => s.title === targetSpotTitle);
-                        if (target) openModal(target);
-                    }
+                    checkAndOpenModalFromUrl();
                 },
                 error: function(err) {
-                    console.error("CSV Error:", err);
+                    console.error("Gallery CSV Error:", err);
                     document.getElementById('gallery-grid').innerHTML = '<div class="col-span-3 py-10 text-center text-xs text-red-400">データの読み込みに失敗しました。</div>';
                 }
             });
+
+            // 2. 新しい「親子でお散歩」用CSVの読み込み
+            if (LOCAL_CSV_URL.startsWith("http")) {
+                Papa.parse(LOCAL_CSV_URL, {
+                    download: true, header: true, skipEmptyLines: true,
+                    complete: function(results) {
+                        localInsightsData = results.data.map(row => {
+                            const clean = {};
+                            Object.keys(row).forEach(k => {
+                                let cleanKey = k.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '').toLowerCase(); 
+                                clean[cleanKey] = (typeof row[k] === 'string') ? row[k].trim() : row[k];
+                            });
+
+                            // lat_lng_rawの自動分割処理
+                            if (clean.lat_lng_raw) {
+                                const parts = clean.lat_lng_raw.split(',');
+                                if (parts.length >= 2) {
+                                    clean.lat = parts[0].trim();
+                                    clean.lng = parts[1].trim();
+                                }
+                            }
+
+                            return clean;
+                        }).filter(s => s.title); // titleが存在するものだけ
+                        
+                        renderLocalInsights();
+                        checkAndOpenModalFromUrl();
+                    },
+                    error: function(err) {
+                        console.error("Local CSV Error (URL not set or invalid):", err);
+                        localInsightsData = [];
+                        renderLocalInsights(); // 空の状態を描画
+                    }
+                });
+            } else {
+                // まだURLが設定されていない場合
+                localInsightsData = [];
+                renderLocalInsights();
+            }
 
             document.querySelectorAll('.tab-item').forEach(tab => {
                 tab.addEventListener('click', () => {
