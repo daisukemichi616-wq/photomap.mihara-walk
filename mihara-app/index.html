@@ -6,7 +6,7 @@
       - Functions連携: サーバー側でのOGP書き換えに対応
       - 多言語化(i18n): EN/JPスイッチおよびRPG×英語の4パターン対応
       - 新機能: 天気API (Open-Meteo) を用いたマジックアワー＆週間天気の自動表示
-      - 追加機能: 「親子でお散歩」縦型スライド・大型マップ・大型写真モーダル（エラー対策＆撮影者設定＆テキスト省略対応版）
+      - 追加機能: 「親子でお散歩」ブログ風デザイン・英語タブ/タグ対応・バグ修正完了版
     -->
 
     <!-- Google tag (gtag.js) -->
@@ -44,6 +44,7 @@
 
     <!-- Icons -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="android-icon.png">
     <link rel="icon" href="apple-touch-icon.png">
 
     <meta name="referrer" content="no-referrer">
@@ -224,7 +225,7 @@
             padding-right: 24px;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none; /* IE/Edge */
-            cursor: grab; /* PC向け: ドラッグできることをアピール */
+            cursor: grab; /* PC向け */
         }
         .horizontal-scroll-container::-webkit-scrollbar {
             display: none; /* Chrome/Safari */
@@ -245,11 +246,11 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.03);
             cursor: pointer;
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-            user-select: none; /* ドラッグ中のテキスト選択防止 */
+            user-select: none;
         }
         .local-card-horizontal:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,64,152,0.08); }
         .horizontal-scroll-container.active .local-card-horizontal {
-            transition: none; /* ドラッグ中はホバーアニメーションを止めて軽くする */
+            transition: none; 
             transform: none;
         }
         .local-card-horizontal.active-card {
@@ -269,7 +270,6 @@
             .local-card-horizontal { flex: 0 0 31%; scroll-snap-align: start; }
         }
 
-        /* ▼ 縦長写真枠 (3:4) */
         .local-card-img-wrap { position: relative; width: 100%; aspect-ratio: 3/4; background: #f1f5f9; overflow: hidden; pointer-events: none; }
         .local-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; pointer-events: none; }
         .local-card-horizontal:hover .local-card-img-wrap img { transform: scale(1.05); }
@@ -279,7 +279,6 @@
         .local-card-content { flex: 1; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; pointer-events: none; }
         .local-card-title { font-size: 1.1rem; font-weight: 700; color: var(--palette-blue); margin-bottom: 8px; font-family: 'Noto Serif JP', serif !important; }
         
-        /* ▼ カードの説明文を3行で省略表示（...）する設定 */
         .local-card-desc { 
             font-size: 0.85rem; 
             font-weight: 500; 
@@ -288,7 +287,7 @@
             margin-bottom: 15px; 
             display: -webkit-box;
             -webkit-box-orient: vertical;
-            -webkit-line-clamp: 3; /* ここで3行に制限 */
+            -webkit-line-clamp: 3; 
             overflow: hidden;
         }
         
@@ -296,7 +295,7 @@
         .local-area { font-size: 10px; font-weight: 700; color: #9ca3af; letter-spacing: 0.1em; text-transform: uppercase; }
         .local-btn { font-size: 10px; font-weight: 700; color: var(--palette-blue); display: flex; align-items: center; gap: 4px; }
         
-        /* ▼ ローカルインサイト用 マップとカードの連動スタイル (PCで高さ拡大) */
+        /* --- ローカルインサイト用 マップとカードの連動スタイル --- */
         #local-map-container {
             height: 50vh;
             min-height: 400px;
@@ -306,11 +305,11 @@
             margin-top: 10px;
             z-index: 1;
             box-shadow: 0 8px 25px rgba(0,0,0,0.03);
-            display: none; /* 初期は非表示 */
+            display: none; 
         }
         @media (min-width: 1024px) {
             #local-map-container {
-                height: 65vh; /* PCではより大きく */
+                height: 65vh; 
                 min-height: 550px;
             }
         }
@@ -519,11 +518,8 @@
     <!-- 新設：LOCAL INSIGHTS（ブログ風タイトル変更版） -->
     <section id="local-insights" class="section-wrap bg-slate-50 border-t border-slate-200">
         <div class="inner-limit max-w-5xl px-0 sm:px-6">
-            <!-- ▼ タイトル周りを「ブログ風」に変更 -->
             <span class="section-tag-label" id="label-local" data-i18n="label-local">PARENT & CHILD LOG</span>
             <h2 class="serif-custom text-blue-900 text-2xl md:text-3xl mb-4" id="title-local" data-i18n="title-local">みはら親子さんぽログ</h2>
-            
-            <!-- ▼ スマホ閲覧時のみ「公式ガイドには載らない、」の後で改行されるように調整 -->
             <p class="text-sm font-bold text-gray-500 mb-6 px-6" id="desc-local" data-i18n="desc-local">公式ガイドには載らない、<br class="block sm:hidden">パパママ目線のリアルな遊び場マップ。</p>
             
             <div id="local-scroll-container" class="horizontal-scroll-container text-left mb-2">
@@ -619,7 +615,6 @@
         <button id="modal-close-btn" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
         <div id="modal-content-area" class="max-w-[600px] mx-auto pb-24 bg-white min-h-screen sm:min-h-0">
             
-            <!-- ▼ 写真を一番上に大きく（横幅いっぱいに広げて）表示するエリア -->
             <img id="modal-img" src="" class="w-full aspect-[4/5] sm:aspect-square object-cover" alt="Photo" onerror="this.onerror=null; this.style.display='none'">
             
             <div class="px-8 py-12 text-left">
@@ -633,9 +628,7 @@
                 </a>
 
                 <div class="flex items-center justify-between border-t border-slate-200 pt-8 mb-8">
-                    <!-- ▼ 撮影者名が反映される場所 -->
                     <span id="modal-author" class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">PHOTO BY 管理者</span>
-                    <!-- ▼ SNSリンクが反映される場所 -->
                     <a id="modal-sns" href="#" target="_blank" rel="noopener noreferrer" class="text-gray-900 font-bold text-[10px] border-b border-gray-900 pb-1 uppercase hover:opacity-70 transition">Instagram Link</a>
                 </div>
 
@@ -1220,6 +1213,47 @@
             }
         };
 
+        // --- PC用：マウストラッグでの横スクロール制御 (安全な初期化に変更) ---
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let isDragged = false;
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const scrollContainer = document.getElementById('local-scroll-container');
+            if (scrollContainer) {
+                scrollContainer.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    isDragged = false;
+                    scrollContainer.classList.add('active');
+                    scrollContainer.style.scrollSnapType = 'none'; 
+                    startX = e.pageX - scrollContainer.offsetLeft;
+                    scrollLeft = scrollContainer.scrollLeft;
+                });
+
+                scrollContainer.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    scrollContainer.classList.remove('active');
+                    scrollContainer.style.scrollSnapType = 'x mandatory';
+                });
+
+                scrollContainer.addEventListener('mouseup', () => {
+                    isDown = false;
+                    scrollContainer.classList.remove('active');
+                    scrollContainer.style.scrollSnapType = 'x mandatory';
+                });
+
+                scrollContainer.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - scrollContainer.offsetLeft;
+                    const walk = (x - startX) * 1.5; 
+                    if (Math.abs(walk) > 5) isDragged = true; 
+                    scrollContainer.scrollLeft = scrollLeft - walk;
+                });
+            }
+        });
+
         // --- URLとモーダルの連動 ---
         function updateUrlParams(spotTitle) {
             if (!history.pushState) return;
@@ -1383,52 +1417,10 @@
             clearUrlParams();
         }
 
-        // --- PC用：マウストラッグでの横スクロール制御 (安全な初期化に変更) ---
-        let isDown = false;
-        let startX;
-        let scrollLeft;
-        let isDragged = false;
-        
-        window.addEventListener('DOMContentLoaded', () => {
-            const scrollContainer = document.getElementById('local-scroll-container');
-            if (scrollContainer) {
-                scrollContainer.addEventListener('mousedown', (e) => {
-                    isDown = true;
-                    isDragged = false;
-                    scrollContainer.classList.add('active');
-                    scrollContainer.style.scrollSnapType = 'none'; 
-                    startX = e.pageX - scrollContainer.offsetLeft;
-                    scrollLeft = scrollContainer.scrollLeft;
-                });
-
-                scrollContainer.addEventListener('mouseleave', () => {
-                    isDown = false;
-                    scrollContainer.classList.remove('active');
-                    scrollContainer.style.scrollSnapType = 'x mandatory';
-                });
-
-                scrollContainer.addEventListener('mouseup', () => {
-                    isDown = false;
-                    scrollContainer.classList.remove('active');
-                    scrollContainer.style.scrollSnapType = 'x mandatory';
-                });
-
-                scrollContainer.addEventListener('mousemove', (e) => {
-                    if (!isDown) return;
-                    e.preventDefault();
-                    const x = e.pageX - scrollContainer.offsetLeft;
-                    const walk = (x - startX) * 1.5; 
-                    if (Math.abs(walk) > 5) isDragged = true; 
-                    scrollContainer.scrollLeft = scrollLeft - walk;
-                });
-            }
-        });
-
         // --- 起動時のデータ読み込み ---
         window.addEventListener('load', () => {
             fetchWeather();
             
-            // ▼ ここがエラーの原因でした。new URLSearchParamsに修正しました！
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('lang') === 'en' || urlParams.get('lang') === 'jp') {
                 currentLang = urlParams.get('lang');
