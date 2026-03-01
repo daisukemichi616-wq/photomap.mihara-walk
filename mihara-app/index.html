@@ -394,7 +394,7 @@
         <div class="header-logo" id="header-logo" data-i18n="header-logo">MIHARA REDISCOVER</div>
         <div class="nav-links-wrap">
             <div class="nav-simple-link" onclick="scrollToId('gallery')" data-i18n="nav-map">マップ</div>
-            <div class="nav-simple-link" onclick="scrollToId('local-insights')" data-i18n="nav-local">親子さんぽ</div>
+            <div class="nav-simple-link" onclick="scrollToId('local-insights')" data-i18n="nav-local">さんぽログ</div>
             <div class="nav-simple-link" onclick="scrollToId('contact')" data-i18n="nav-submit">掲載募集</div>
             <div class="nav-simple-link hidden sm:block" onclick="scrollToId('guideline')" data-i18n="nav-guide">掲載案内</div>
             
@@ -667,7 +667,7 @@
         const i18nData = {
             'header-logo': { normal: { jp: 'MIHARA REDISCOVER', en: 'MIHARA REDISCOVER' }, rpg: { jp: 'MIHARA QUEST', en: 'MIHARA QUEST' } },
             'nav-map': { normal: { jp: 'マップ', en: 'MAP' }, rpg: { jp: 'ちず', en: 'MAP' } },
-            'nav-local': { normal: { jp: '親子さんぽ', en: 'KIDS WALKS' }, rpg: { jp: 'うわさばなし', en: 'RUMORS' } },
+            'nav-local': { normal: { jp: 'さんぽログ', en: 'WALK LOG' }, rpg: { jp: 'うわさばなし', en: 'RUMORS' } },
             'nav-submit': { normal: { jp: '掲載募集', en: 'SUBMIT' }, rpg: { jp: 'ギルドへ', en: 'GUILD' } },
             'nav-guide': { normal: { jp: '掲載案内', en: 'GUIDES' }, rpg: { jp: 'おきて', en: 'RULES' } },
             'hero-label': { normal: { jp: 'MIHARA REDISCOVER PROJECT', en: 'MIHARA REDISCOVER PROJECT' }, rpg: { jp: 'MIHARA QUEST PROJECT', en: 'MIHARA QUEST PROJECT' } },
@@ -1122,7 +1122,12 @@
                 const lang = currentLang;
                 const title = (lang === 'en' && spot.title_en) ? spot.title_en : spot.title;
                 const desc = (lang === 'en' && spot.desc_en) ? spot.desc_en : spot.desc;
-                const tag = spot.tag || "🎒 親子でお散歩";
+                
+                // ▼ タグの英語対応（tag_enが設定されていればそれを表示）
+                const defaultTagJp = "🎒 親子でお散歩";
+                const defaultTagEn = "🎒 Family Walk";
+                const tag = lang === 'en' ? (spot.tag_en || spot.tag || defaultTagEn) : (spot.tag || defaultTagJp);
+                
                 const areaLabel = areaLabels[spot.area] ? areaLabels[spot.area][lang] : (lang==='en'?'MIHARA':'三原');
 
                 // カードの生成
